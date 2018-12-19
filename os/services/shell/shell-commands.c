@@ -151,6 +151,32 @@ rpl_ocp_to_str(int ocp)
 }
 /*---------------------------------------------------------------------------*/
 static
+PT_THREAD(na(struct pt *pt, shell_output_func output, char *args))
+{
+  char *next_args;;
+
+  PT_BEGIN(pt);
+  SHELL_OUTPUT(output, "nancy_test\n");
+
+  SHELL_ARGS_INIT(args, next_args);
+
+  /* Get argument (remote IPv6) */
+  SHELL_ARGS_NEXT(args, next_args);
+
+  while(args != NULL){
+    if(!strcmp(args, "1")) {
+      SHELL_OUTPUT(output, "is 1 %s\n", args);
+    } else if(!strcmp(args, "0")) {
+      SHELL_OUTPUT(output, "is 0 %s\n", args);
+    } else {
+      SHELL_OUTPUT(output, "Invalid argument: %s\n", args);
+    }
+    SHELL_ARGS_NEXT(args, next_args);
+  }
+  PT_END(pt);
+}
+/*---------------------------------------------------------------------------*/
+static
 PT_THREAD(cmd_rpl_nbr(struct pt *pt, shell_output_func output, char *args))
 {
   PT_BEGIN(pt);
@@ -850,6 +876,7 @@ const struct shell_command_t builtin_shell_commands[] = {
   { "ip-nbr",               cmd_ip_neighbors,         "'> ip-nbr': Shows all IPv6 neighbors" },
   { "log",                  cmd_log,                  "'> log module level': Sets log level (0--4) for a given module (or \"all\"). For module \"mac\", level 4 also enables per-slot logging." },
   { "ping",                 cmd_ping,                 "'> ping addr': Pings the IPv6 address 'addr'" },
+  {"na", na, "'>na'"},
 #if UIP_CONF_IPV6_RPL
   { "rpl-set-root",         cmd_rpl_set_root,         "'> rpl-set-root 0/1 [prefix]': Sets node as root (1) or not (0). A /64 prefix can be optionally specified." },
   { "rpl-local-repair",     cmd_rpl_local_repair,     "'> rpl-local-repair': Triggers a RPL local repair" },
