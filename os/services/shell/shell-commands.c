@@ -68,6 +68,10 @@
 #include "net/routing/rpl-classic/rpl.h"
 #endif
 
+#include "project/rpl-udp/command-type.h"
+
+
+
 #include <stdlib.h>
 
 #define PING_TIMEOUT (5 * CLOCK_SECOND)
@@ -151,7 +155,7 @@ rpl_ocp_to_str(int ocp)
 }
 /*---------------------------------------------------------------------------*/
 static
-PT_THREAD(na(struct pt *pt, shell_output_func output, char *args))
+PT_THREAD(cmd_na(struct pt *pt, shell_output_func output, char *args))
 {
   char *next_args;;
 
@@ -171,8 +175,10 @@ PT_THREAD(na(struct pt *pt, shell_output_func output, char *args))
     } else {
       SHELL_OUTPUT(output, "Invalid argument: %s\n", args);
     }
+    serial_input(args);
     SHELL_ARGS_NEXT(args, next_args);
   }
+
   PT_END(pt);
 }
 /*---------------------------------------------------------------------------*/
@@ -876,7 +882,7 @@ const struct shell_command_t builtin_shell_commands[] = {
   { "ip-nbr",               cmd_ip_neighbors,         "'> ip-nbr': Shows all IPv6 neighbors" },
   { "log",                  cmd_log,                  "'> log module level': Sets log level (0--4) for a given module (or \"all\"). For module \"mac\", level 4 also enables per-slot logging." },
   { "ping",                 cmd_ping,                 "'> ping addr': Pings the IPv6 address 'addr'" },
-  {"na", na, "'>na'"},
+  { "na",                   cmd_na,                      "'>na'" },
 #if UIP_CONF_IPV6_RPL
   { "rpl-set-root",         cmd_rpl_set_root,         "'> rpl-set-root 0/1 [prefix]': Sets node as root (1) or not (0). A /64 prefix can be optionally specified." },
   { "rpl-local-repair",     cmd_rpl_local_repair,     "'> rpl-local-repair': Triggers a RPL local repair" },

@@ -9,6 +9,7 @@
 #include "net/ipv6/uip-ds6-nbr.h"
 #include "net/ipv6/uip-sr.h"
 #include "net/mac/tsch/tsch.h"
+#include "command-type.h"
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
@@ -21,16 +22,40 @@
 #define UDP_CLIENT_PORT	8765
 #define UDP_SERVER_PORT	5678
 
-static struct simple_udp_connection udp_conn;
+struct simple_udp_connection udp_conn;
 
 #define START_INTERVAL		(15 * CLOCK_SECOND)
-#define SEND_INTERVAL		  (5 * CLOCK_SECOND)
+#define SEND_INTERVAL		  (30 * CLOCK_SECOND)
 
 uip_ipaddr_t dest_ipaddr;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(udp_client_process, "UDP client");
 AUTOSTART_PROCESSES(&udp_client_process);
+/*---------------------------------------------------------------------------*/
+void
+collect_ack_send(const uip_ipaddr_t *sender_addr,
+         uint16_t commandId)
+{
+  // printf("generate ack packet\n");
+  struct 
+  {
+    uint16_t command_id;
+    uint16_t command_type;
+    uint16_t is_received;
+  }ack;
+
+  memset(&ack, 0, sizeof(ack));
+
+  ack.command_id = commandId;
+  ack.command_type = CMD_TYPE_ACK;
+  ack.is_received = 1;
+  // printf("sizeof(ack) %d\n", sizeof(ack));
+  printf("ack: %u %u %u\n", ack.command_type, ack.command_id, ack.is_received);
+
+  printf("send ack\n");
+  simple_udp_sendto(&udp_conn, &ack, sizeof(ack), sender_addr);
+}
 /*---------------------------------------------------------------------------*/
 static void
 udp_rx_callback(struct simple_udp_connection *c,
@@ -41,9 +66,69 @@ udp_rx_callback(struct simple_udp_connection *c,
          const uint8_t *data,
          uint16_t datalen)
 {
+  struct msg{
+    uint16_t commandId;
+    uint16_t commandType;
+  };
+  struct msg msg;
+  uint16_t sensor_num = 0;
 
-  LOG_INFO("Received response '%.*s' from ", datalen, (char *) data);
-  LOG_INFO_6ADDR(sender_addr);
+  memset(&msg, 0, sizeof(msg));
+  printf("sizeof(msg) %d\n", sizeof(msg));
+
+  printf("--------------------recv data-----------------\n");
+  printf("uip_datalen %u\n",datalen);
+
+  memcpy(&msg.commandId, data, sizeof(uint16_t));
+  data+=sizeof(uint16_t);
+  memcpy(&msg.commandType, data, sizeof(uint16_t));
+  data+=sizeof(uint16_t);
+  printf("msg.commandType %u\n", msg.commandType);
+  printf("msg.commandId %u\n", msg.commandId);
+
+  if(uip_datalen()>4)
+  {
+    memcpy(&sensor_num, data, sizeof(uint16_t));
+    data+=sizeof(uint16_t);
+  }
+
+  struct setting_msg setting_msg[sensor_num];
+
+  if(sensor_num>0)
+  {
+    for(int i=0; i<sensor_num; i++)
+    {
+      memcpy(&setting_msg[i].setting_type, data, sizeof(uint16_t));
+      data+=sizeof(uint16_t);
+      memcpy(&setting_msg[i].sensor_tittle, data, sizeof(uint16_t));
+      data+=sizeof(uint16_t);
+      memcpy(&setting_msg[i].value, data, sizeof(uint16_t));
+      data+=sizeof(uint16_t);
+    }
+  }
+
+  // switch(msg.commandType){
+  //   case CMD_TYPE_CONF:
+  //     printf("should send conf\n");
+  //     set_ack_flag(msg.commandId, 1);
+  //     break;
+    
+  //   case CMD_TYPE_SET:
+  //     printf("should set value\n");
+  //     set_ack_flag(msg.commandId, 0);
+  //     if(sensor_num>0)
+  //     {
+  //       for(int i=0; i<sensor_num; i++)
+  //       {
+  //         setting_value(setting_msg[i]);
+  //       }
+  //     }
+  //     break;
+  // }
+
+  collect_ack_send(sender_addr, msg.commandId);
+  // LOG_INFO("Received response '%.*s' from ", datalen, data);
+  // LOG_INFO_6ADDR(sender_addr);
 #if LLSEC802154_CONF_ENABLED
   LOG_INFO_(" LLSEC LV:%d", uipbuf_get_attr(UIPBUF_ATTR_LLSEC_LEVEL));
 #endif
@@ -131,10 +216,10 @@ collect_common_send(void)
   msg.msg.current_rtmetric = rtmetric;
   msg.msg.num_neighbors = num_neighbors;
   msg.msg.beacon_interval = beacon_interval;
-  LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
-  LOG_INFO("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
-  LOG_INFO("num_neighbors'%u' \n", msg.msg.num_neighbors);
-  LOG_INFO("beacon_interval'%u' \n", msg.msg.beacon_interval);
+  // LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
+  // LOG_INFO("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
+  // LOG_INFO("num_neighbors'%u' \n", msg.msg.num_neighbors);
+  // LOG_INFO("beacon_interval'%u' \n", msg.msg.beacon_interval);
   simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
 }
 
