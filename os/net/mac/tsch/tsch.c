@@ -58,6 +58,8 @@
 #include "lib/random.h"
 #include "net/routing/routing.h"
 
+#include "dev/leds.h"
+
 #if TSCH_WITH_SIXTOP
 #include "net/mac/tsch/sixtop/sixtop.h"
 #endif
@@ -535,6 +537,7 @@ tsch_disassociate(void)
 {
   if(tsch_is_associated == 1) {
     tsch_is_associated = 0;
+    leds_off(LEDS_RED);
     process_post(&tsch_process, PROCESS_EVENT_POLL, NULL);
   }
 }
@@ -790,6 +793,7 @@ PT_THREAD(tsch_scan(struct pt *pt))
     if(tsch_is_associated) {
       /* End of association, turn the radio off */
       NETSTACK_RADIO.off();
+      leds_on(LEDS_RED);
     } else if(!tsch_is_coordinator) {
       /* Go back to scanning */
       etimer_reset(&scan_timer);

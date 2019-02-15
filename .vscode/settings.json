@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "*.l": "lex",
+        "*.cu": "cpp",
+        "*.s": "muchassemblyrequired",
+        "*.c": "c",
+        "*.S": "arm",
+        "*.target": "makefile",
+        "uart.h": "c",
+        "modbus-api.h": "c"
+    }
+}
