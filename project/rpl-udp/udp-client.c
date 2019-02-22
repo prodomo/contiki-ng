@@ -10,6 +10,8 @@
 #include "net/ipv6/uip-sr.h"
 #include "net/mac/tsch/tsch.h"
 #include "command-type.h"
+#include "dev/adc-sensors.h"
+#include "dev/modbus/modbus-api.h"
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
@@ -27,12 +29,39 @@ struct simple_udp_connection udp_conn;
 #define START_INTERVAL		(15 * CLOCK_SECOND)
 #define SEND_INTERVAL		  (30 * CLOCK_SECOND)
 
+#define ADC_PIN 5
+
 uip_ipaddr_t dest_ipaddr;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(udp_client_process, "UDP client");
 AUTOSTART_PROCESSES(&udp_client_process);
 /*---------------------------------------------------------------------------*/
+
+void batt_init()
+{
+  adc_sensors.configure(ANALOG_AAC_SENSOR, ADC_PIN);
+}
+
+int get_batt()
+{
+  int v = adc_sensors.value(ANALOG_AAC_SENSOR);
+  // return v;
+  if (v < 32000)
+    return -1;
+  int r = (v-32400)/100;
+
+  if (r <= 1) {
+    return 1;
+  }
+  else if(r > 100)
+  {
+    return 100;
+  }
+
+  return r;
+}
+
 void
 collect_ack_send(const uip_ipaddr_t *sender_addr,
          uint16_t commandId)
@@ -247,8 +276,14 @@ PROCESS_THREAD(udp_client_process, ev, data)
                       UDP_SERVER_PORT, udp_rx_callback);
 
   etimer_set(&periodic_timer, random_rand() % SEND_INTERVAL);
+
+  batt_init();
+  modbus_init();
+
   while(1) {
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+
+    LOG_INFO("Battery: %d%%\n", get_batt());
 
     if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dest_ipaddr)) {
       /* Send to DAG root */

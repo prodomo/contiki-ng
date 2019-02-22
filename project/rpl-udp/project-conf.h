@@ -42,7 +42,9 @@
 
 /* USB serial takes space, free more space elsewhere */
 #define SICSLOWPAN_CONF_FRAG 0
-#define UIP_CONF_BUFFER_SIZE 160
+#define UIP_CONF_BUFFER_SIZE 140
+#define QUEUEBUF_CONF_NUM 4
+
 
 /*******************************************************/
 /******************* Configure TSCH ********************/

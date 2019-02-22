@@ -8,6 +8,9 @@ MODULES += os/services/shell
 PROJECT_SOURCEFILES += command-type.c
 # MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
 
+CFLAGS += -DUART1_CONF_BAUD_RATE=9600
 
+CONTIKI_TARGET_SOURCEFILES += adc-sensors.c
+MODULES += arch/dev/modbus
 
 include $(CONTIKI)/Makefile.include
