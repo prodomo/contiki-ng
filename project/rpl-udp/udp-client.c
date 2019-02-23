@@ -107,25 +107,6 @@ udp_rx_callback(struct simple_udp_connection *c,
     }
   }
 
-  // switch(msg.commandType){
-  //   case CMD_TYPE_CONF:
-  //     printf("should send conf\n");
-  //     set_ack_flag(msg.commandId, 1);
-  //     break;
-    
-  //   case CMD_TYPE_SET:
-  //     printf("should set value\n");
-  //     set_ack_flag(msg.commandId, 0);
-  //     if(sensor_num>0)
-  //     {
-  //       for(int i=0; i<sensor_num; i++)
-  //       {
-  //         setting_value(setting_msg[i]);
-  //       }
-  //     }
-  //     break;
-  // }
-
   collect_ack_send(sender_addr, msg.commandId);
   // LOG_INFO("Received response '%.*s' from ", datalen, data);
   // LOG_INFO_6ADDR(sender_addr);
@@ -202,10 +183,8 @@ collect_common_send(void)
       }
     }
     rtmetric = dag->rank;
-    LOG_INFO("rtmetric'%u' \n", rtmetric);
     // beacon_interval = (uint16_t) ((2L << dag->instance->dio_intcurrent) / 1000);
     num_neighbors = uip_ds6_nbr_num();
-    LOG_INFO("num_neighbors'%u' \n", num_neighbors);
   } else {
     rtmetric = 0;
     beacon_interval = 0;
@@ -216,10 +195,10 @@ collect_common_send(void)
   msg.msg.current_rtmetric = rtmetric;
   msg.msg.num_neighbors = num_neighbors;
   msg.msg.beacon_interval = beacon_interval;
-  // LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
-  // LOG_INFO("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
-  // LOG_INFO("num_neighbors'%u' \n", msg.msg.num_neighbors);
-  // LOG_INFO("beacon_interval'%u' \n", msg.msg.beacon_interval);
+  LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
+  LOG_INFO("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
+  LOG_INFO("num_neighbors'%u' \n", msg.msg.num_neighbors);
+  LOG_INFO("beacon_interval'%u' \n", msg.msg.beacon_interval);
   simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
 }
 

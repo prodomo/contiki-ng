@@ -46,7 +46,7 @@
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
-#define LOG_LEVEL LOG_LEVEL_NONE
+#define LOG_LEVEL LOG_LEVEL_INFO
 
 // #define DEBUG DEBUG_PRINT
 // #include "net/ipv6/uip-debug.h"
@@ -137,11 +137,10 @@ void command_send()
 
   LOG_INFO_6ADDR(&temp_ipaddr);
 
-
-
-  if(strncmp(temp[2], BROADCAST, 4)==0)
+  if(strncmp(temp[1], BROADCAST, 4)==0)
   {
     LOG_INFO("broadcast\n");
+    simple_udp_msend(&udp_conn, &msg, sizeof(msg));  //can't broadcast yet
   }
   else
   {
@@ -152,17 +151,18 @@ void command_send()
     dst_u8[1] = ascii_to_uint(temp[1][2])<<4;
     dst_u8[1] += ascii_to_uint(temp[1][3]);
     
-    // temp_ipaddr.u8[14]=dst_u8[0];
-    // temp_ipaddr.u8[15]=dst_u8[1];
+    temp_ipaddr.u8[14]=dst_u8[0];
+    temp_ipaddr.u8[15]=dst_u8[1];
 
-    LOG_INFO("mac 1: %u\n", dst_u8[0]);
-    LOG_INFO("mac 2: %u\n", dst_u8[1]);
+    LOG_INFO("mac 1: %x\n", dst_u8[0]);
+    LOG_INFO("mac 2: %x\n", dst_u8[1]);
 
 
     LOG_INFO_6ADDR(&temp_ipaddr);
+    simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &temp_ipaddr);
   }
 
-  simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &temp_ipaddr);
+  // simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &temp_ipaddr);
 
 
 }

@@ -74,6 +74,16 @@ simple_udp_send(struct simple_udp_connection *c,
 }
 /*---------------------------------------------------------------------------*/
 int
+simple_udp_msend(struct simple_udp_connection *c,
+                const void *data, uint16_t datalen)
+{
+  if(c->udp_conn != NULL) {
+    uip_udp_packet_send(c->udp_conn, data, datalen);
+  }
+  return 0;
+}
+/*---------------------------------------------------------------------------*/
+int
 simple_udp_sendto(struct simple_udp_connection *c,
                   const void *data, uint16_t datalen,
                   const uip_ipaddr_t *to)
