@@ -10,6 +10,7 @@
 #include "net/ipv6/uip-sr.h"
 #include "net/mac/tsch/tsch.h"
 #include "command-type.h"
+#include "dev/adc-sensors.h"
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
@@ -24,14 +25,77 @@
 
 struct simple_udp_connection udp_conn;
 
-#define START_INTERVAL		(15 * CLOCK_SECOND)
-#define SEND_INTERVAL		  (30 * CLOCK_SECOND)
+int send_period = 30;
+
+int temperature_threshold = 50;
+//temperature ax+b=y
+int temperature_a = 14285; 
+int temperature_b = 628550;
+
+int battery_threshold = 40;
+
+
+
+
+#define START_INTERVAL		(send_period/2 * CLOCK_SECOND)
+#define SEND_INTERVAL		  (send_period * CLOCK_SECOND)
+
+#define ADC_PIN 5
 
 uip_ipaddr_t dest_ipaddr;
+
 
 /*---------------------------------------------------------------------------*/
 PROCESS(udp_client_process, "UDP client");
 AUTOSTART_PROCESSES(&udp_client_process);
+/*---------------------------------------------------------------------------*/
+void batt_init()
+{
+  adc_sensors.configure(ANALOG_AAC_SENSOR, ADC_PIN);
+}
+/*---------------------------------------------------------------------------*/
+int get_batt()
+{
+  int v = adc_sensors.value(ANALOG_AAC_SENSOR);
+  // return v;
+  if (v < 32000)
+    return -1;
+  int r = (v-32400)/100;
+
+  if (r <= 1) {
+    return 1;
+  }
+  else if(r > 100)
+  {
+    return 100;
+  }
+
+  return r;
+}
+/*---------------------------------------------------------------------------*/
+int
+change_TemperatureValue_to_RealValue(int value)
+{
+  // 13428=50c, 23428=120c
+
+  int result = 0;
+
+  value = value*100;
+
+  if(value>=temperature_b)
+  {
+    result= (value-temperature_b)/temperature_a;
+    printf("%d to result: %d \n",value, result);
+    return result;
+  }
+  else
+  {
+    result = 0-((temperature_b-value)/temperature_a);
+    printf("%d to result: %d \n",value, result);
+    return result;
+  }
+
+}
 /*---------------------------------------------------------------------------*/
 void
 collect_ack_send(const uip_ipaddr_t *sender_addr,
@@ -55,6 +119,58 @@ collect_ack_send(const uip_ipaddr_t *sender_addr,
 
   printf("send ack\n");
   simple_udp_sendto(&udp_conn, &ack, sizeof(ack), sender_addr);
+}
+/*---------------------------------------------------------------------------*/
+void setting_value(struct setting_msg msg)
+{
+
+  if(msg.setting_type == SET_TYPE_RATE && msg.sensor_tittle == SNR_TLE_DEFAULT)
+  {
+    send_period = msg.value;
+    printf("changing sending rate %u\n", msg.value);
+  }
+  else if(msg.setting_type == SET_TYPE_THRESHOLD)
+  {
+    switch(msg.sensor_tittle){
+      case SNR_TLE_DEFAULT:
+        break;
+      
+      case SNR_TLE_TEMPERATURE:
+        temperature_threshold = msg.value;
+        printf("changing temperature threshold: %d\n",temperature_threshold);
+        break;
+
+      case SNR_TLE_TEMPERATURE_A:
+        temperature_a = msg.value;
+        printf("changing temperature_a: %d\n", temperature_a);
+        break;
+      
+      case SNR_TLE_TEMPERATURE_B:
+        temperature_b = msg.value;
+        printf("changing temperature_b: %d\n", temperature_b);
+        break;
+
+      case SNR_TLE_BATTERY:
+        battery_threshold = msg.value;
+        printf("changing battery_threshold: %d\n", battery_threshold);
+        break;
+
+      case SNR_TLE_ELE_CURRENT:
+        printf("changing electric current threshold\n");
+        break;
+      
+      case SNR_TLE_ROTAT_SPEED:
+        printf("changing rotation speed threshold\n");
+        break;
+      
+      default:
+        break;
+      }
+  }
+  else{
+    return;
+  }
+
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -106,6 +222,23 @@ udp_rx_callback(struct simple_udp_connection *c,
       data+=sizeof(uint16_t);
     }
   }
+  switch(msg.commandType)
+  {
+    case CMD_TYPE_CONF:
+      printf("should send conf\n");
+      break;
+      
+    case CMD_TYPE_SET:
+      printf("should set value\n");
+      if(sensor_num>0)
+      {
+        for(int i=0; i<sensor_num; i++)
+        {
+          setting_value(setting_msg[i]);
+        }
+      }
+      break;
+    }
 
   collect_ack_send(sender_addr, msg.commandId);
   // LOG_INFO("Received response '%.*s' from ", datalen, data);
@@ -148,6 +281,7 @@ collect_common_send(void)
   uint16_t rtmetric;
   uint16_t num_neighbors;
   uint16_t beacon_interval;
+  uint16_t battery;
   rpl_parent_t *preferred_parent;
   linkaddr_t parent;
   rpl_dag_t *dag;
@@ -191,6 +325,7 @@ collect_common_send(void)
     num_neighbors = 0;
   }
   // memcpy(msg.msg.parent, parent->u8[LINKADDR_SIZE - 2], 2);
+  battery = get_batt();
   msg.msg.parent_etx = parent_etx;
   msg.msg.current_rtmetric = rtmetric;
   msg.msg.num_neighbors = num_neighbors;
@@ -199,6 +334,7 @@ collect_common_send(void)
   LOG_INFO("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
   LOG_INFO("num_neighbors'%u' \n", msg.msg.num_neighbors);
   LOG_INFO("beacon_interval'%u' \n", msg.msg.beacon_interval);
+  LOG_INFO("battery'%u' \n", battery);
   simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
 }
 
@@ -224,6 +360,8 @@ PROCESS_THREAD(udp_client_process, ev, data)
   /* Initialize UDP connection */
   simple_udp_register(&udp_conn, UDP_CLIENT_PORT, NULL,
                       UDP_SERVER_PORT, udp_rx_callback);
+
+  batt_init();
 
   etimer_set(&periodic_timer, random_rand() % SEND_INTERVAL);
   while(1) {

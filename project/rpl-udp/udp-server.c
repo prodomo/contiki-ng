@@ -34,6 +34,7 @@
 #include "net/ipv6/uip-ds6-route.h"
 #include "net/ipv6/uip-sr.h"
 #include "net/ipv6/uip.h"
+#include "net/ipv6/uip-ds6.h"
 #include "net/mac/tsch/tsch.h"
 #include "dev/serial-line.h"
 #include "command-type.h"
@@ -177,6 +178,7 @@ udp_rx_callback(struct simple_udp_connection *c,
          uint16_t datalen)
 {
   uint16_t tempdata;
+  uint8_t hops;
 
   LOG_INFO("Received request '%u' ", datalen);
   LOG_INFO("from ");
@@ -184,8 +186,10 @@ udp_rx_callback(struct simple_udp_connection *c,
   LOG_INFO_("\n");
 
   printf("%u ", datalen);
-  printf("%04x ", sender_addr->u8[14] + (sender_addr->u8[15] << 8));
+  printf("%02x%02x ", sender_addr->u8[14],sender_addr->u8[15]);
 
+  hops = uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1;
+  printf("%d ", hops);
 
   for(int i=0; i<(datalen/2); i++)
   {

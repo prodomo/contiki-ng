@@ -18,6 +18,9 @@
 #define SNR_TLE_ELE_CURRENT 0x02
 #define SNR_TLE_ROTAT_SPEED 0x03
 #define SNR_TLE_DISTANCE    0x04
+#define SNR_TLE_TEMPERATURE_A 0x05  //a of ax+b=y 
+#define SNR_TLE_TEMPERATURE_B 0x06  //b of ax+b=y
+#define SNR_TLE_BATTERY		0x07
 
 #define SNR_TLE_MODBUS_ADDR 0x11
 #define SNR_TLE_MODBUS_REG  0x12
@@ -31,6 +34,7 @@
 #define SET_TYPE_STATE 		0x03
 #define SET_TYPE_MODBUS		0x04
 #define SET_TYPE_PRIORITY	0x05
+
 
 //GENERATATION STATE
 #define DEFAULT_STATE 0x00
