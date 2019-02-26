@@ -27,6 +27,9 @@
 #define SNR_TLE_MODBUS_FREQ 0x13
 #define SNR_TLE_MODBUS_TYPE 0x14
 
+#define SNR_TLE_URGENT_VALUE 61
+#define SNR_TLE_URGENT_SOUND 62
+
 //Setting Type
 // #define SET_TYPE_ASK 0x00
 #define SET_TYPE_RATE 		0x01

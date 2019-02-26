@@ -34,6 +34,9 @@ int temperature_b = 628550;
 
 int battery_threshold = 40;
 
+int urgent_value_on =0;
+int urgent_sound_on =0;
+
 
 
 
@@ -131,6 +134,7 @@ void setting_value(struct setting_msg msg)
   }
   else if(msg.setting_type == SET_TYPE_THRESHOLD)
   {
+    printf("sensor_tittle %d\n", msg.sensor_tittle);
     switch(msg.sensor_tittle){
       case SNR_TLE_DEFAULT:
         break;
@@ -155,14 +159,23 @@ void setting_value(struct setting_msg msg)
         printf("changing battery_threshold: %d\n", battery_threshold);
         break;
 
-      case SNR_TLE_ELE_CURRENT:
-        printf("changing electric current threshold\n");
-        break;
+      // case SNR_TLE_ELE_CURRENT:
+      //   printf("changing electric current threshold\n");
+      //   break;
       
-      case SNR_TLE_ROTAT_SPEED:
-        printf("changing rotation speed threshold\n");
+      // case SNR_TLE_ROTAT_SPEED:
+      //   printf("changing rotation speed threshold\n");
+      //   break;
+      case SNR_TLE_URGENT_VALUE:
+        urgent_value_on = msg.value;
+        printf("changing urgent_value_on: %d\n", urgent_value_on);
         break;
-      
+
+      case SNR_TLE_URGENT_SOUND:
+        urgent_sound_on = msg.value;
+        printf("changing urgent_sound_on: %d\n", urgent_sound_on);
+        break;
+
       default:
         break;
       }
