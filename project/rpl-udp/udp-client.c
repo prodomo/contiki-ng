@@ -11,6 +11,7 @@
 #include "net/mac/tsch/tsch.h"
 #include "command-type.h"
 #include "dev/adc-sensors.h"
+#include "dev/servo.h"
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
@@ -124,6 +125,30 @@ collect_ack_send(const uip_ipaddr_t *sender_addr,
   simple_udp_sendto(&udp_conn, &ack, sizeof(ack), sender_addr);
 }
 /*---------------------------------------------------------------------------*/
+void
+set_urgent_sound_onoff(int is_on)
+{
+  static uint8_t deg = 180;
+  static uint8_t sound_pin=5;
+  static uint8_t light_pin=6;
+  static uint8_t freq =5; //5Hz
+
+  if(is_on==1)
+  {
+    servo_position_na(SERVO_CHANNEL_7, GPIO_A_NUM, sound_pin, deg, freq);
+    servo_position_na(SERVO_CHANNEL_6, GPIO_A_NUM, light_pin, deg, freq);
+  }
+  else if(is_on==0)
+  {
+      servo_stop(SERVO_CHANNEL_7, GPIO_A_NUM, sound_pin);
+      servo_stop(SERVO_CHANNEL_6, GPIO_A_NUM, light_pin);
+  }
+  else
+  {
+
+  }
+}
+/*---------------------------------------------------------------------------*/
 void setting_value(struct setting_msg msg)
 {
 
@@ -173,6 +198,7 @@ void setting_value(struct setting_msg msg)
 
       case SNR_TLE_URGENT_SOUND:
         urgent_sound_on = msg.value;
+        set_urgent_sound_onoff(urgent_sound_on);
         printf("changing urgent_sound_on: %d\n", urgent_sound_on);
         break;
 

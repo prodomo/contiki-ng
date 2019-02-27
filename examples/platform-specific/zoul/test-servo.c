@@ -80,20 +80,22 @@ PROCESS_THREAD(servo_test_process, ev, data)
 
   while(1) {
 
-    servo_position(SERVO_CHANNEL_5, GPIO_A_NUM, 5, deg);
+    servo_position(SERVO_CHANNEL_7, GPIO_A_NUM, 5, deg);
+    servo_position(SERVO_CHANNEL_6, GPIO_A_NUM, 6, deg);
     PRINTF("Current position --> %03uº\n", deg);
 
-    etimer_set(&et, CLOCK_SECOND / 2);
+    etimer_set(&et, 10*CLOCK_SECOND );
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
     /* Increase the position by 10º each iteration */
-    deg += 10;
+    deg += 60;
     if(deg > SERVO_MAX_DEGREES) {
       deg = 0;
-      servo_stop(SERVO_CHANNEL_5, GPIO_A_NUM, 5);
+      servo_stop(SERVO_CHANNEL_7, GPIO_A_NUM, 5);
+      servo_stop(SERVO_CHANNEL_6, GPIO_A_NUM, 6);
 
-      /* Stop the servo and wait 2 seconds before resuming from start */
-      etimer_set(&et, CLOCK_SECOND * 2);
+    //    Stop the servo and wait 2 seconds before resuming from start 
+      etimer_set(&et, CLOCK_SECOND * 20);
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     }
   }

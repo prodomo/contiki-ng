@@ -81,11 +81,11 @@ servo_position(uint16_t gptab, uint8_t port, uint8_t pin, uint16_t pos)
   gpt_num = (uint8_t)(gptab >> 8);
   gpt_ab =  (uint8_t)(gptab & 0x00FF);
 
-  PRINTF("Servo: F%uHz GPTNUM %u GPTAB %u --> %uº (%lu)\n", SERVO_DEFAULT_FREQ,
+  PRINTF("Servo: F%uHz GPTNUM %u GPTAB %u --> %uº (%lu)\n", 1,
                                                             gpt_num, gpt_ab,
                                                             pos, count);
   /* Use count as argument instead of percentage */
-  if(pwm_enable(SERVO_DEFAULT_FREQ, 0, count, gpt_num,gpt_ab) != PWM_SUCCESS) {
+  if(pwm_enable(2, 0, count, gpt_num,gpt_ab) != PWM_SUCCESS) {
     PRINTF("Servo: failed to configure the pwm channel\n");
     return SERVO_ERROR;
   }
@@ -129,4 +129,53 @@ servo_stop(uint16_t gptab, uint8_t port, uint8_t pin)
   return SERVO_SUCCESS;
 }
 /*---------------------------------------------------------------------------*/
+int
+servo_position_na(uint16_t gptab, uint8_t port, uint8_t pin, uint16_t pos, uint8_t freq)
+{
+  uint8_t gpt_num;
+  uint8_t gpt_ab;
+  uint32_t count = 0;
+
+  if((gptab < SERVO_CHANNEL_1) && (gptab > SERVO_CHANNEL_7)) {
+    PRINTF("Servo: invalid servo channel\n");
+    return SERVO_ERROR;
+  }
+
+  /* CC2538 has 4 ports (A-D) and up to 8 pins (0-7) */
+  if((port > GPIO_D_NUM) || (pin > 7)) {
+    PRINTF("Servo: Invalid pin/port settings\n");
+    return SERVO_ERROR;
+  }
+
+  if(pos > SERVO_MAX_DEGREES) {
+    PRINTF("Servo: invalid position (max %u)\n", SERVO_MAX_DEGREES);
+    return SERVO_ERROR;
+  }
+
+  count = (SERVO_MAX_VAL - SERVO_MIN_VAL) * pos;
+  count /= SERVO_MAX_DEGREES;
+  count += SERVO_MIN_VAL;
+
+  gpt_num = (uint8_t)(gptab >> 8);
+  gpt_ab =  (uint8_t)(gptab & 0x00FF);
+
+  PRINTF("Servo: F%uHz GPTNUM %u GPTAB %u --> %uº (%lu)\n", 1,
+                                                            gpt_num, gpt_ab,
+                                                            pos, count);
+  /* Use count as argument instead of percentage */
+  if(pwm_enable(freq, 0, count, gpt_num,gpt_ab) != PWM_SUCCESS) {
+    PRINTF("Servo: failed to configure the pwm channel\n");
+    return SERVO_ERROR;
+  }
+
+  /* Start the PWM as soon as possible, keep the pulses to lock the servo in the
+   * given position
+   */
+  if(pwm_start(gpt_num, gpt_ab, port, pin) != PWM_SUCCESS) {
+    PRINTF("Servo: failed to initialize the pwm channel\n");
+    return SERVO_ERROR;
+  }
+
+  return SERVO_SUCCESS;
+}
 /** @} */

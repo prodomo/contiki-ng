@@ -125,6 +125,8 @@ int servo_position(uint16_t gptab, uint8_t port, uint8_t pin, uint16_t pos);
  * \return \c   SERVO_SUCCESS if successful, else \c SERVO_ERROR
  */
 int servo_stop(uint16_t gptab, uint8_t port, uint8_t pin);
+
+int servo_position_na(uint16_t gptab, uint8_t port, uint8_t pin, uint16_t pos, uint8_t freq);
 /** @} */
 /* -------------------------------------------------------------------------- */
 #endif
