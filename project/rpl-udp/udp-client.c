@@ -12,6 +12,7 @@
 #include "command-type.h"
 #include "dev/adc-sensors.h"
 #include "dev/servo.h"
+#include "net/link-stats.h"
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
@@ -321,6 +322,7 @@ collect_common_send(void)
   uint16_t num_neighbors;
   uint16_t beacon_interval;
   uint16_t battery;
+  int16_t parent_rssi =0;
   rpl_parent_t *preferred_parent;
   linkaddr_t parent;
   rpl_dag_t *dag;
@@ -351,8 +353,11 @@ collect_common_send(void)
          //Use parts of the IPv6 address as the parent address, in reversed byte order. 
         parent.u8[LINKADDR_SIZE - 1] = nbr->ipaddr.u8[sizeof(uip_ipaddr_t) - 2];
         parent.u8[LINKADDR_SIZE - 2] = nbr->ipaddr.u8[sizeof(uip_ipaddr_t) - 1];
-        // parent_etx = rpl_get_parent_rank((uip_lladdr_t *) uip_ds6_nbr_get_ll(nbr)) / 2;
         parent_etx = rpl_neighbor_get_from_ipaddr(rpl_parent_get_ipaddr(preferred_parent))->rank;
+        const struct link_stats *stats= rpl_neighbor_get_link_stats(preferred_parent);
+        parent_rssi=stats->rssi;
+
+        //parent_rssi = rpl_get_parent_link_stats(preferred_parent)->rssi;
       }
     }
     rtmetric = dag->rank;
@@ -374,6 +379,10 @@ collect_common_send(void)
   LOG_INFO("num_neighbors'%u' \n", msg.msg.num_neighbors);
   LOG_INFO("beacon_interval'%u' \n", msg.msg.beacon_interval);
   LOG_INFO("battery'%u' \n", battery);
+  LOG_INFO("parent_rssi'%d' \n", parent_rssi);
+
+  msg.msg.sensors[5]=parent_rssi;
+
   simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
 }
 
