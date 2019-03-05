@@ -163,7 +163,7 @@ servo_position_na(uint16_t gptab, uint8_t port, uint8_t pin, uint16_t pos, uint8
                                                             gpt_num, gpt_ab,
                                                             pos, count);
   /* Use count as argument instead of percentage */
-  if(pwm_enable(freq, 0, count, gpt_num,gpt_ab) != PWM_SUCCESS) {
+  if(pwm_enable(freq, 50, count, gpt_num,gpt_ab) != PWM_SUCCESS) {
     PRINTF("Servo: failed to configure the pwm channel\n");
     return SERVO_ERROR;
   }

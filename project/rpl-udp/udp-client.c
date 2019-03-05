@@ -37,7 +37,7 @@ int temperature_b = 628550;
 int battery_threshold = 40;
 
 int urgent_value_on =0;
-int urgent_sound_on =0;
+int urgent_sound_on =1;
 
 
 
@@ -410,6 +410,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
                       UDP_SERVER_PORT, udp_rx_callback);
 
   batt_init();
+  set_urgent_sound_onoff(1);
 
   etimer_set(&periodic_timer, random_rand() % SEND_INTERVAL);
   while(1) {
