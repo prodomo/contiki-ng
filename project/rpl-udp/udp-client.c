@@ -27,7 +27,7 @@
 
 struct simple_udp_connection udp_conn;
 
-int send_period = 30;
+int send_period = 5;
 
 int temperature_threshold = 50;
 //temperature ax+b=y
@@ -37,7 +37,7 @@ int temperature_b = 628550;
 int battery_threshold = 40;
 
 int urgent_value_on =0;
-int urgent_sound_on =1;
+int urgent_sound_on =0;
 
 
 
@@ -293,36 +293,31 @@ udp_rx_callback(struct simple_udp_connection *c,
 void
 collect_common_send(void)
 {
-  static uint8_t seqno;
+  static uint16_t seqno;
 
-  struct collect_view_data_msg {
-  uint16_t len;
-  uint16_t clock;
-  uint16_t timesynch_time;
-  uint16_t cpu;
-  uint16_t lpm;
-  uint16_t transmit;
-  uint16_t listen;
+  struct collect_data_msg {
   uint16_t parent;
   uint16_t parent_etx;
   uint16_t current_rtmetric;
   uint16_t num_neighbors;
-  uint16_t beacon_interval;
-
-  uint16_t sensors[10];
+  uint16_t parent_rssi;
+  uint16_t temp_value;
+  uint16_t ain0_value;
+  uint16_t ain1_value;
+  uint16_t battery;
 };
 
   struct {
     uint16_t seqno;
-    struct collect_view_data_msg msg;
+    struct collect_data_msg msg;
   } msg;
   /* struct collect_neighbor *n; */
   uint16_t parent_etx;
   uint16_t rtmetric;
   uint16_t num_neighbors;
-  uint16_t beacon_interval;
   uint16_t battery;
   int16_t parent_rssi =0;
+
   rpl_parent_t *preferred_parent;
   linkaddr_t parent;
   rpl_dag_t *dag;
@@ -333,9 +328,9 @@ collect_common_send(void)
 
   memset(&msg, 0, sizeof(msg));
   seqno++;
-  if(seqno == 0) {
+  if(seqno >=65535) {
     /* Wrap to 128 to identify restarts */
-    seqno = 128;
+    seqno = 1;
   }
   msg.seqno = seqno;
 
@@ -361,27 +356,24 @@ collect_common_send(void)
       }
     }
     rtmetric = dag->rank;
-    // beacon_interval = (uint16_t) ((2L << dag->instance->dio_intcurrent) / 1000);
     num_neighbors = uip_ds6_nbr_num();
   } else {
     rtmetric = 0;
-    beacon_interval = 0;
     num_neighbors = 0;
   }
-  // memcpy(msg.msg.parent, parent->u8[LINKADDR_SIZE - 2], 2);
+  memcpy(&msg.msg.parent, &parent.u8[LINKADDR_SIZE - 2], 2);
   battery = get_batt();
   msg.msg.parent_etx = parent_etx;
   msg.msg.current_rtmetric = rtmetric;
   msg.msg.num_neighbors = num_neighbors;
-  msg.msg.beacon_interval = beacon_interval;
+  msg.msg.parent_rssi = (uint16_t)parent_rssi;
+  msg.msg.battery = battery;
+  LOG_INFO("parent'%x' \n", msg.msg.parent);
   LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
   LOG_INFO("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
   LOG_INFO("num_neighbors'%u' \n", msg.msg.num_neighbors);
-  LOG_INFO("beacon_interval'%u' \n", msg.msg.beacon_interval);
   LOG_INFO("battery'%u' \n", battery);
   LOG_INFO("parent_rssi'%d' \n", parent_rssi);
-
-  msg.msg.sensors[5]=parent_rssi;
 
   simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
 }
@@ -410,7 +402,6 @@ PROCESS_THREAD(udp_client_process, ev, data)
                       UDP_SERVER_PORT, udp_rx_callback);
 
   batt_init();
-  set_urgent_sound_onoff(1);
 
   etimer_set(&periodic_timer, random_rand() % SEND_INTERVAL);
   while(1) {

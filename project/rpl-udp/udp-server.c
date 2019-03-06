@@ -47,7 +47,7 @@
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
-#define LOG_LEVEL LOG_LEVEL_INFO
+#define LOG_LEVEL LOG_LEVEL_NONE
 
 // #define DEBUG DEBUG_PRINT
 // #include "net/ipv6/uip-debug.h"
@@ -191,7 +191,15 @@ udp_rx_callback(struct simple_udp_connection *c,
   hops = uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1;
   printf("%d ", hops);
 
-  for(int i=0; i<(datalen/2); i++)
+  memcpy(&tempdata , data, sizeof(uint16_t));
+  data+=sizeof(uint16_t);
+  printf("%u ",tempdata);
+
+  memcpy(&tempdata , data, sizeof(uint16_t));
+  data+=sizeof(uint16_t);
+  printf("%x ",tempdata);
+
+  for(int i=0; i<(datalen/2)-2; i++)
   {
     memcpy(&tempdata , data, sizeof(uint16_t));
     data+=sizeof(uint16_t);
