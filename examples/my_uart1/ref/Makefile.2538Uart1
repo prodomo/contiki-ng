@@ -1,0 +1,5 @@
+CONTIKI_PROJECT = cc2538-uart1
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../..
+include $(CONTIKI)/Makefile.include
