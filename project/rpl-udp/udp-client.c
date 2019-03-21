@@ -28,7 +28,10 @@
 
 struct simple_udp_connection udp_conn;
 
-int send_period = 5;
+
+int user_control_send_period=5;
+int argent_period=1;
+int send_period;
 
 int temperature_threshold = 50;
 //temperature ax+b=y
@@ -317,8 +320,8 @@ collect_common_send(void)
   uint16_t num_neighbors;
   uint16_t parent_rssi;
   uint16_t temp_value;
-  uint16_t ext_tempature_value;
-  uint16_t int_tempature_value;
+  uint16_t ext_tempature_value;  // =real value*100
+  uint16_t int_tempature_value;  // =real value*1000
   uint16_t battery;
 };
 
@@ -338,6 +341,8 @@ collect_common_send(void)
   rpl_dag_t *dag;
   // static uint16_t count=0;
   // char string[20];
+  int int_t;
+  int ext_t;
 
 
   memset(&msg, 0, sizeof(msg));
@@ -383,14 +388,44 @@ collect_common_send(void)
   msg.msg.parent_rssi = (uint16_t)parent_rssi;
   msg.msg.battery = battery;
   msg.msg.ext_tempature_value = (uint16_t)get_tempature();
-  msg.msg.int_tempature_value = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
+  msg.msg.int_tempature_value = (uint16_t)cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
+
+  int_t = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/1000;
+  ext_t = get_tempature()/100;
+
   LOG_INFO("parent'%x' \n", msg.msg.parent);
   LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
   LOG_INFO("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
   LOG_INFO("num_neighbors'%u' \n", msg.msg.num_neighbors);
   LOG_INFO("battery'%u' \n", battery);
   LOG_INFO("parent_rssi'%d' \n", parent_rssi);
-  LOG_INFO("ext_tempature_value'%d' \n", get_tempature());
+  LOG_INFO("ext_tempature_value'%d' \n", ext_t);
+  LOG_INFO("int_tempature_value'%d' \n", int_t);
+
+  if(ext_t>= temperature_threshold && urgent_sound_on==0){
+    printf("temperature too high ext '%d'\n", get_tempature()/100);
+    printf("temperature_threshold'%d'\n", temperature_threshold);
+    send_period=argent_period;
+    urgent_sound_on = 1;
+    set_urgent_sound_onoff(urgent_sound_on);
+  }
+  else if(int_t >= temperature_threshold && urgent_sound_on==0){
+    printf("temperature too high int \n");
+    printf("temperature_threshold'%d'\n", temperature_threshold);
+    send_period=argent_period;
+    urgent_sound_on = 1;
+    set_urgent_sound_onoff(urgent_sound_on);
+  }
+  else if(urgent_sound_on==1 && int_t < temperature_threshold && ext_t< temperature_threshold)
+  {
+    send_period=user_control_send_period;
+    urgent_sound_on = 0;
+    set_urgent_sound_onoff(urgent_sound_on);
+    printf("turn back to '%d'\n", send_period);
+  }
+  else{
+
+  }
 
   simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
 }
@@ -419,6 +454,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
                       UDP_SERVER_PORT, udp_rx_callback);
 
   batt_init();
+  send_period = user_control_send_period;
 
   etimer_set(&periodic_timer, random_rand() % SEND_INTERVAL);
   while(1) {
