@@ -13,6 +13,7 @@
 #include "dev/adc-sensors.h"
 #include "dev/servo.h"
 #include "net/link-stats.h"
+#include "dev/cc2538-sensors.h"
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
@@ -31,8 +32,8 @@ int send_period = 5;
 
 int temperature_threshold = 50;
 //temperature ax+b=y
-int temperature_a = 14285; 
-int temperature_b = 628550;
+int temperature_a = 26; 
+int temperature_b = 259400;
 
 int battery_threshold = 40;
 
@@ -46,6 +47,7 @@ int urgent_sound_on =0;
 #define SEND_INTERVAL		  (send_period * CLOCK_SECOND)
 
 #define ADC_PIN 5
+#define PT100_PIN 4
 
 uip_ipaddr_t dest_ipaddr;
 
@@ -57,6 +59,7 @@ AUTOSTART_PROCESSES(&udp_client_process);
 void batt_init()
 {
   adc_sensors.configure(ANALOG_AAC_SENSOR, ADC_PIN);
+  adc_sensors.configure(ANALOG_VAC_SENSOR, PT100_PIN);
 }
 /*---------------------------------------------------------------------------*/
 int get_batt()
@@ -74,6 +77,16 @@ int get_batt()
   {
     return 100;
   }
+
+  return r;
+}
+/*---------------------------------------------------------------------------*/
+int get_tempature()
+{
+  int v = adc_sensors.value(ANALOG_VAC_SENSOR);
+  // return v;
+  int r = (v*temperature_a-temperature_b)/100;
+
 
   return r;
 }
@@ -283,6 +296,8 @@ udp_rx_callback(struct simple_udp_connection *c,
   collect_ack_send(sender_addr, msg.commandId);
   // LOG_INFO("Received response '%.*s' from ", datalen, data);
   // LOG_INFO_6ADDR(sender_addr);
+
+
 #if LLSEC802154_CONF_ENABLED
   LOG_INFO_(" LLSEC LV:%d", uipbuf_get_attr(UIPBUF_ATTR_LLSEC_LEVEL));
 #endif
@@ -302,8 +317,8 @@ collect_common_send(void)
   uint16_t num_neighbors;
   uint16_t parent_rssi;
   uint16_t temp_value;
-  uint16_t ain0_value;
-  uint16_t ain1_value;
+  uint16_t ext_tempature_value;
+  uint16_t int_tempature_value;
   uint16_t battery;
 };
 
@@ -323,8 +338,7 @@ collect_common_send(void)
   rpl_dag_t *dag;
   // static uint16_t count=0;
   // char string[20];
-  // int temp_value;
-  // int ain0_value, ain1_value;
+
 
   memset(&msg, 0, sizeof(msg));
   seqno++;
@@ -368,12 +382,15 @@ collect_common_send(void)
   msg.msg.num_neighbors = num_neighbors;
   msg.msg.parent_rssi = (uint16_t)parent_rssi;
   msg.msg.battery = battery;
+  msg.msg.ext_tempature_value = (uint16_t)get_tempature();
+  msg.msg.int_tempature_value = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
   LOG_INFO("parent'%x' \n", msg.msg.parent);
   LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
   LOG_INFO("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
   LOG_INFO("num_neighbors'%u' \n", msg.msg.num_neighbors);
   LOG_INFO("battery'%u' \n", battery);
   LOG_INFO("parent_rssi'%d' \n", parent_rssi);
+  LOG_INFO("ext_tempature_value'%d' \n", get_tempature());
 
   simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
 }
@@ -406,6 +423,13 @@ PROCESS_THREAD(udp_client_process, ev, data)
   etimer_set(&periodic_timer, random_rand() % SEND_INTERVAL);
   while(1) {
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+
+    // printf("AC Amps = %d mA\n", adc_sensors.value(ANALOG_AAC_SENSOR));
+    // printf("AC voltage = %d V\n", adc_sensors.value(ANALOG_VAC_SENSOR));
+    // // printf("battery = %d\n", get_batt());
+
+    // printf("temperature= %d\n", get_tempature());
+    // printf("cc2538 temp= %d\n", cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED));
 
     if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dest_ipaddr)) {
       /* Send to DAG root */

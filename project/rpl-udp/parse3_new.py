@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 
 ser = serial.Serial('/dev/ttyUSB0', 115200)
 
-key_map = OrderedDict({'DATA_LEN':0, 'NODE_ID':1, 'SEQNO':2, 'HOPS':3, 'BEST_NEIGHBOR':4, 'BEST_NEIGHBOR_ETX':5,
- 'RTMETRIC':6, 'NUM_NEIGHBORS':7, 'RSSI':8 ,'TEMP':9, 'AIN0':10, 'AIN1':11 ,'BATTERY':12})
+key_map = OrderedDict({'DATA_LEN':0, 'NODE_ID':1, 'HOPS':2, 'SEQNO':3, 'BEST_NEIGHBOR':4, 'BEST_NEIGHBOR_ETX':5,
+ 'RTMETRIC':6, 'NUM_NEIGHBORS':7, 'RSSI':8 ,'TEMP':9, 'EXT_T':10, 'INT_T':11 ,'BATTERY':12})
 
 def upload_to_DB(data):
   try:
@@ -25,9 +25,13 @@ def upload_to_DB(data):
 
       #mySql cmd
     ext_value = 0.0
-    ext_value += float(data[key_map['AIN0']]) /10
+    ext_value += float(data[key_map['EXT_T']]) /100
     int_value = 0.0
-    int_value += float(data[key_map['AIN1']]) / 1000
+    int_value += float(data[key_map['INT_T']]) /1000
+
+    print "ext_value: {0}, {1}".format(int(data[key_map['EXT_T']]), ext_value)
+    print "ext_value: {0}, {1}".format(int(data[key_map['INT_T']]), int_value)
+
 
       #add by Nancy
     etx = 0.0
@@ -39,11 +43,11 @@ def upload_to_DB(data):
 
     insert_sql = "INSERT INTO itri_MOEA_sensor(sn, mac_addr, ext_temperature, pyranometer, datetime, int_temperature, battery_volt) \
     VALUES({0}, '{1}', {2}, {3}, '{4}', {5}, {6})".format(int(data[key_map['SEQNO']]), data[key_map['NODE_ID']],\
-     ext_value, data[key_map['AIN0']], datetime.now(), int_value, data[key_map['BATTERY']])
+     ext_value, data[key_map['INT_T']], datetime.now(), int_value, data[key_map['BATTERY']])
 
     rps_sql = "REPLACE INTO itri_MOEA_current_sensor(sn, mac_addr, ext_temperature, pyranometer, datetime, int_temperature, battery_volt) \
     VALUES({0}, '{1}', {2}, {3}, '{4}', {5}, {6})".format(int(data[key_map['SEQNO']]), data[key_map['NODE_ID']],\
-     ext_value, data[key_map['AIN0']], datetime.now(), int_value, data[key_map['BATTERY']])
+     ext_value, data[key_map['INT_T']], datetime.now(), int_value, data[key_map['BATTERY']])
     try:
         # Execute the SQL command
       print (insert_sql)
@@ -59,7 +63,7 @@ def upload_to_DB(data):
       print 'insert DB failed, do not rollback'
       
 
-      # ## topology part
+      ## topology part
 
 
     sql = "INSERT INTO itri_topology_neighbors(mode, neighborNum, devAddr,PDR, parentAddr, datetime, SN, rank, n1, rssi1)VALUES('{0}', {1}, '{2}', {3}, '{4}', '{5}', {6}, {7}, '{8}', {9})"\

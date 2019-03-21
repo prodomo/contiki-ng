@@ -110,8 +110,8 @@ convert_to_value(uint8_t index)
    /* VDD+5 sensors */ 
   case ANALOG_VAC_SENSOR:
     /* Linear sensor from 0 to 5 V; 0.0088 resolution*/
-    value *= 88;
-    value /= 10000;
+    // value *= 88;
+    // value /= 10000;
     return (uint16_t)value;
 
   case ANALOG_AAC_SENSOR:
@@ -200,6 +200,13 @@ configure(int type, int value)
 
   /*V+5 sensors*/
   case ANALOG_VAC_SENSOR:
+  if(adc_zoul.configure(SENSORS_HW_INIT, pin_mask) == ZOUL_SENSORS_ERROR) {
+      return ADC_WRAPPER_ERROR;
+    }
+    sensors.sensor[sensors.sensors_num].type = type;
+    sensors.sensor[sensors.sensors_num].pin_mask = pin_mask;
+    sensors.sensor[sensors.sensors_num].vdd3 = 0;
+    break;
   case ANALOG_AAC_SENSOR:
     if(adc_zoul.configure(SENSORS_HW_INIT, pin_mask) == ZOUL_SENSORS_ERROR) {
       return ADC_WRAPPER_ERROR;
