@@ -152,7 +152,7 @@ void
 set_urgent_sound_onoff(int is_on)
 {
   static uint8_t deg = 180;
-  static uint8_t sound_pin=5;
+  static uint8_t sound_pin=7;
   static uint8_t light_pin=6;
   static uint8_t freq =5; //5Hz
 
@@ -347,8 +347,8 @@ collect_common_send(void)
   rpl_dag_t *dag;
   // static uint16_t count=0;
   // char string[20];
-  int int_t, int_t_s7s_test;
-  int ext_t;
+  int int_t;
+  int ext_t, ext_t_s7s_test;
 
 
   memset(&msg, 0, sizeof(msg));
@@ -397,8 +397,9 @@ collect_common_send(void)
   msg.msg.int_tempature_value = (uint16_t)cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
 
   int_t = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/1000;
-  int_t_s7s_test = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/100;
+  // int_t_s7s_test = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/100;
   ext_t = get_tempature()/100;
+  ext_t_s7s_test = ext_t*10;
 
   LOG_INFO("parent'%x' \n", msg.msg.parent);
   LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
@@ -409,8 +410,8 @@ collect_common_send(void)
   LOG_INFO("ext_tempature_value'%d' \n", ext_t);
   LOG_INFO("int_tempature_value'%d' \n", int_t);
 
-  LOG_INFO("s7s display value='%d/10' \n", int_t_s7s_test);
-  s7s_uart1_display(int_t_s7s_test);
+  LOG_INFO("s7s display value='%d/10' \n", ext_t_s7s_test);
+  s7s_uart1_display(ext_t_s7s_test);
 
   if(ext_t>= temperature_threshold && urgent_sound_on==0){
     printf("temperature too high ext '%d'\n", get_tempature()/100);
