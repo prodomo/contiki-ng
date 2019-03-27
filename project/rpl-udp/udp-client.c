@@ -29,8 +29,8 @@
 struct simple_udp_connection udp_conn;
 
 
-int user_control_send_period=5;
-int argent_period=1;
+int user_control_send_period=15;
+int argent_period=3;
 int send_period;
 
 int temperature_threshold = 50;
@@ -70,7 +70,14 @@ int get_batt()
   int v = adc_sensors.value(ANALOG_AAC_SENSOR);
   // return v;
   if (v < 32000)
-    return -1;
+  {
+    v=adc_sensors.value(ANALOG_AAC_SENSOR);
+    
+    if(v < 32000){
+      return -1;
+    }
+  }
+
   int r = (v-32400)/100;
 
   if (r <= 1) {
@@ -89,6 +96,11 @@ int get_tempature()
   int v = adc_sensors.value(ANALOG_VAC_SENSOR);
   // return v;
   int r = (v*temperature_a-temperature_b)/100;
+
+  if(r <=0 || r>100)
+  {
+    return -1;
+  }
 
 
   return r;
@@ -146,7 +158,7 @@ void
 set_urgent_sound_onoff(int is_on)
 {
   static uint8_t deg = 180;
-  static uint8_t sound_pin=5;
+  static uint8_t sound_pin=7;
   static uint8_t light_pin=6;
   static uint8_t freq =5; //5Hz
 
@@ -382,16 +394,18 @@ collect_common_send(void)
   }
   memcpy(&msg.msg.parent, &parent.u8[LINKADDR_SIZE - 2], 2);
   battery = get_batt();
+  
+  int_t = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/1000;
+  ext_t = get_tempature()/100;
+
   msg.msg.parent_etx = parent_etx;
   msg.msg.current_rtmetric = rtmetric;
   msg.msg.num_neighbors = num_neighbors;
   msg.msg.parent_rssi = (uint16_t)parent_rssi;
   msg.msg.battery = battery;
+
   msg.msg.ext_tempature_value = (uint16_t)get_tempature();
   msg.msg.int_tempature_value = (uint16_t)cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
-
-  int_t = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/1000;
-  ext_t = get_tempature()/100;
 
   LOG_INFO("parent'%x' \n", msg.msg.parent);
   LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
