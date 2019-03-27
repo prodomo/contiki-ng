@@ -15,6 +15,9 @@
 #include "net/link-stats.h"
 #include "dev/cc2538-sensors.h"
 
+#include "dev/uart.h"
+#include "lib/uart1-s7s.h"
+
 #include "sys/log.h"
 #define LOG_MODULE "App"
 #define LOG_LEVEL LOG_LEVEL_INFO
@@ -29,8 +32,8 @@
 struct simple_udp_connection udp_conn;
 
 
-int user_control_send_period=15;
-int argent_period=3;
+int user_control_send_period=5;
+int argent_period=1;
 int send_period;
 
 int temperature_threshold = 50;
@@ -58,6 +61,9 @@ uip_ipaddr_t dest_ipaddr;
 /*---------------------------------------------------------------------------*/
 PROCESS(udp_client_process, "UDP client");
 AUTOSTART_PROCESSES(&udp_client_process);
+
+//PROCESS(s7s_drive_process, "Driving 7-seg display");
+//AUTOSTART_PROCESSES(&s7s_drive_process);
 /*---------------------------------------------------------------------------*/
 void batt_init()
 {
@@ -70,14 +76,7 @@ int get_batt()
   int v = adc_sensors.value(ANALOG_AAC_SENSOR);
   // return v;
   if (v < 32000)
-  {
-    v=adc_sensors.value(ANALOG_AAC_SENSOR);
-    
-    if(v < 32000){
-      return -1;
-    }
-  }
-
+    return -1;
   int r = (v-32400)/100;
 
   if (r <= 1) {
@@ -96,11 +95,6 @@ int get_tempature()
   int v = adc_sensors.value(ANALOG_VAC_SENSOR);
   // return v;
   int r = (v*temperature_a-temperature_b)/100;
-
-  if(r <=0 || r>100)
-  {
-    return -1;
-  }
 
 
   return r;
@@ -354,7 +348,7 @@ collect_common_send(void)
   // static uint16_t count=0;
   // char string[20];
   int int_t;
-  int ext_t;
+  int ext_t, ext_t_s7s_test;
 
 
   memset(&msg, 0, sizeof(msg));
@@ -394,18 +388,18 @@ collect_common_send(void)
   }
   memcpy(&msg.msg.parent, &parent.u8[LINKADDR_SIZE - 2], 2);
   battery = get_batt();
-  
-  int_t = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/1000;
-  ext_t = get_tempature()/100;
-
   msg.msg.parent_etx = parent_etx;
   msg.msg.current_rtmetric = rtmetric;
   msg.msg.num_neighbors = num_neighbors;
   msg.msg.parent_rssi = (uint16_t)parent_rssi;
   msg.msg.battery = battery;
-
   msg.msg.ext_tempature_value = (uint16_t)get_tempature();
   msg.msg.int_tempature_value = (uint16_t)cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
+
+  int_t = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/1000;
+  // int_t_s7s_test = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/100;
+  ext_t = get_tempature()/100;
+  ext_t_s7s_test = ext_t*10;
 
   LOG_INFO("parent'%x' \n", msg.msg.parent);
   LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
@@ -415,6 +409,9 @@ collect_common_send(void)
   LOG_INFO("parent_rssi'%d' \n", parent_rssi);
   LOG_INFO("ext_tempature_value'%d' \n", ext_t);
   LOG_INFO("int_tempature_value'%d' \n", int_t);
+
+  LOG_INFO("s7s display value='%d/10' \n", ext_t_s7s_test);
+  s7s_uart1_display(ext_t_s7s_test);
 
   if(ext_t>= temperature_threshold && urgent_sound_on==0){
     printf("temperature too high ext '%d'\n", get_tempature()/100);
@@ -470,6 +467,11 @@ PROCESS_THREAD(udp_client_process, ev, data)
   batt_init();
   send_period = user_control_send_period;
 
+  // setup s7s
+  s7s_uart1_init();
+  LOG_INFO("Start s7s driving !\n");
+  s7s_uart1_display(1234);
+
   etimer_set(&periodic_timer, random_rand() % SEND_INTERVAL);
   while(1) {
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
@@ -492,6 +494,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
       count++;
     } else {
       LOG_INFO("Not reachable yet\n");
+      s7s_uart1_display(1234);
     }
 
     /* Add some jitter */
@@ -501,4 +504,39 @@ PROCESS_THREAD(udp_client_process, ev, data)
 
   PROCESS_END();
 }
+
+#if 0
+PROCESS_THREAD(s7s_drive_process, ev, data)
+{
+  static struct etimer s7s_timer;
+//  uint8_t cmd[9]={0x79, 0x76, 0x00, 0x30, 0x35, 0x32, 0x33, 0x77, 0x04};
+//  uint8_t send_data[20];
+  PROCESS_BEGIN();
+//  int  tmp_int, j;
+  static int ii=9998;
+  /* Setup a periodic timer that expires after 10 seconds. */
+  etimer_set(&s7s_timer, CLOCK_SECOND/16);
+
+  s7s_uart1_init();
+
+  LOG_INFO("Start s7s driving !\n");
+
+  while(1) {
+    //printf("Hello, world\n");
+
+    s7s_uart1_display(ii);
+
+    ii++;
+    if (ii>9999)
+      ii = 0;
+    //memset(send_data, sizeof(send_data), 0);
+    /* Wait for the periodic timer to expire and then restart the timer. */
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&s7s_timer));
+    etimer_reset(&s7s_timer);
+  }
+
+  PROCESS_END();
+}
+#endif
+
 /*---------------------------------------------------------------------------*/
