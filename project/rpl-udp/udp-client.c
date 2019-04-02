@@ -32,9 +32,9 @@
 struct simple_udp_connection udp_conn;
 
 
-int user_control_send_period=5;
-int argent_period=1;
-int send_period;
+int user_control_send_period=15;
+int argent_period=3;
+int send_period = 15;
 
 int temperature_threshold = 50;
 //temperature ax+b=y
@@ -339,7 +339,7 @@ collect_common_send(void)
   uint16_t parent_etx;
   uint16_t rtmetric;
   uint16_t num_neighbors;
-  uint16_t battery;
+  int16_t battery;
   int16_t parent_rssi =0;
 
   rpl_parent_t *preferred_parent;
@@ -388,6 +388,12 @@ collect_common_send(void)
   }
   memcpy(&msg.msg.parent, &parent.u8[LINKADDR_SIZE - 2], 2);
   battery = get_batt();
+  
+  if(battery < 0)
+  {
+    msg.msg.battery=0;
+  }
+
   msg.msg.parent_etx = parent_etx;
   msg.msg.current_rtmetric = rtmetric;
   msg.msg.num_neighbors = num_neighbors;
@@ -401,11 +407,18 @@ collect_common_send(void)
   ext_t = get_tempature()/100;
   ext_t_s7s_test = ext_t*10;
 
+  if(ext_t < 0)
+  {
+    msg.msg.ext_tempature_value=0;
+    ext_t_s7s_test=0;
+  }
+
+
   LOG_INFO("parent'%x' \n", msg.msg.parent);
   LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
   LOG_INFO("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
   LOG_INFO("num_neighbors'%u' \n", msg.msg.num_neighbors);
-  LOG_INFO("battery'%u' \n", battery);
+  LOG_INFO("battery'%d' \n", battery);
   LOG_INFO("parent_rssi'%d' \n", parent_rssi);
   LOG_INFO("ext_tempature_value'%d' \n", ext_t);
   LOG_INFO("int_tempature_value'%d' \n", int_t);
@@ -482,6 +495,8 @@ PROCESS_THREAD(udp_client_process, ev, data)
 
     // printf("temperature= %d\n", get_tempature());
     // printf("cc2538 temp= %d\n", cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED));
+    LOG_INFO("{asn %02x.%08lx} \n", tsch_current_asn.ms1b, tsch_current_asn.ls4b);
+    LOG_INFO("packet timer timeout %u , %lu !\n", count, RTIMER_NOW());
 
     if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dest_ipaddr)) {
       /* Send to DAG root */
@@ -497,9 +512,11 @@ PROCESS_THREAD(udp_client_process, ev, data)
       s7s_uart1_display(1234);
     }
 
-    /* Add some jitter */
-    etimer_set(&periodic_timer, SEND_INTERVAL
-      - CLOCK_SECOND + (random_rand() % (2 * CLOCK_SECOND)));
+
+    // /* Add some jitter */
+    // etimer_set(&periodic_timer, SEND_INTERVAL
+    //   - CLOCK_SECOND + (random_rand() % (2 * CLOCK_SECOND)));
+    etimer_reset(&periodic_timer);
   }
 
   PROCESS_END();

@@ -10,7 +10,8 @@ key_map = OrderedDict({'DATA_LEN':0, 'NODE_ID':1, 'HOPS':2, 'SEQNO':3, 'BEST_NEI
 
 def upload_to_DB(data):
   try:
-    db = MySQLdb.connect("127.0.0.1","root","sakimaru","ITRI_OpenWSN" )
+    #db = MySQLdb.connect("127.0.0.1","root","sakimaru","ITRI_OpenWSN" )
+    db = MySQLdb.connect("http://carbooky.dsmynas:59506","root","sakimaru","ITRI_OpenWSN" )
     cursor = db.cursor()
     sql= "CREATE TABLE IF NOT EXISTS itri_MOEA_current_sensor ( `sn` INT(11), `position` VARCHAR(80), `mac_addr` VARCHAR(45), `led_status` VARCHAR(45), `pyranometer` INT(11), `int_temperature` FLOAT, `ext_temperature` FLOAT, `battery_volt` FLOAT, datetime DATETIME, `ID` INT(11), PRIMARY KEY(`mac_addr`))"
 
