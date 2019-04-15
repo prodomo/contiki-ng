@@ -388,10 +388,24 @@ collect_common_send(void)
   }
   memcpy(&msg.msg.parent, &parent.u8[LINKADDR_SIZE - 2], 2);
   battery = get_batt();
+  battery=20;
   
   if(battery < 0)
   {
     msg.msg.battery=0;
+  }
+
+
+
+  int_t = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/1000;
+  // int_t_s7s_test = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/100;
+  ext_t = get_tempature();
+  ext_t_s7s_test = ext_t/10;
+
+  if(ext_t < 0)
+  {
+    ext_t=0;
+    ext_t_s7s_test=0;
   }
 
   msg.msg.parent_etx = parent_etx;
@@ -399,19 +413,8 @@ collect_common_send(void)
   msg.msg.num_neighbors = num_neighbors;
   msg.msg.parent_rssi = (uint16_t)parent_rssi;
   msg.msg.battery = battery;
-  msg.msg.ext_tempature_value = (uint16_t)get_tempature();
+  msg.msg.ext_tempature_value = (uint16_t)ext_t;
   msg.msg.int_tempature_value = (uint16_t)cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
-
-  int_t = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/1000;
-  // int_t_s7s_test = cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED)/100;
-  ext_t = get_tempature()/100;
-  ext_t_s7s_test = ext_t*10;
-
-  if(ext_t < 0)
-  {
-    msg.msg.ext_tempature_value=0;
-    ext_t_s7s_test=0;
-  }
 
 
   LOG_INFO("parent'%x' \n", msg.msg.parent);
