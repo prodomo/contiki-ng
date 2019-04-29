@@ -8,6 +8,7 @@ CONTIKI=../..
 MAKE_MAC = MAKE_MAC_TSCH
 MODULES += os/services/shell
 
+
 ifeq ($(MAKE_WITH_ORCHESTRA),1)
 MODULES += os/services/orchestra
 endif

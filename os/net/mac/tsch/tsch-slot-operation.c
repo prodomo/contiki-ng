@@ -1063,7 +1063,9 @@ PT_THREAD(tsch_slot_operation(struct rtimer *t, void *ptr))
         }
 
         /* Update ASN */
+        // printf("[INFO: TSCH-LOG  ] {update before asn %02x.%08lx link-NULL} \n", tsch_current_asn.ms1b, tsch_current_asn.ls4b);
         TSCH_ASN_INC(tsch_current_asn, timeslot_diff);
+        // printf("[INFO: TSCH-LOG  ] {update afterasn %02x.%08lx link-NULL} \n", tsch_current_asn.ms1b, tsch_current_asn.ls4b);
         /* Time to next wake up */
         time_to_next_active_slot = timeslot_diff * tsch_timing[tsch_ts_timeslot_length] + drift_correction;
         time_to_next_active_slot += tsch_timesync_adaptive_compensate(time_to_next_active_slot);
@@ -1101,7 +1103,9 @@ tsch_slot_operation_start(void)
       timeslot_diff = 1;
     }
     /* Update ASN */
+    printf("[INFO: TSCH-LOG  ] {update before asn %02x.%08lx link-NULL} \n", tsch_current_asn.ms1b, tsch_current_asn.ls4b);
     TSCH_ASN_INC(tsch_current_asn, timeslot_diff);
+    printf("[INFO: TSCH-LOG  ] {update after asn %02x.%08lx link-NULL} \n", tsch_current_asn.ms1b, tsch_current_asn.ls4b);
     /* Time to next wake up */
     time_to_next_active_slot = timeslot_diff * tsch_timing[tsch_ts_timeslot_length];
     /* Update current slot start */
