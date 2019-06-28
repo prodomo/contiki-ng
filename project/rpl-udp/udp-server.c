@@ -35,10 +35,11 @@
 #include "net/ipv6/uip-sr.h"
 #include "net/ipv6/uip.h"
 #include "net/mac/tsch/tsch.h"
+#include "dev/leds.h"
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
-#define LOG_LEVEL LOG_LEVEL_INFO
+#define LOG_LEVEL LOG_LEVEL_NONE
 
 // #define DEBUG DEBUG_PRINT
 // #include "net/ipv6/uip-debug.h"
@@ -52,6 +53,17 @@ static struct simple_udp_connection udp_conn;
 PROCESS(udp_server_process, "UDP server");
 AUTOSTART_PROCESSES(&udp_server_process);
 /*---------------------------------------------------------------------------*/
+void
+leds_blink(void)
+{
+  /* Blink all leds that were initially off. */
+  leds_toggle(LEDS_GREEN);
+
+  clock_delay(400);
+
+  leds_toggle(LEDS_GREEN);
+}
+/*---------------------------------------------------------------------------*/
 static void
 udp_rx_callback(struct simple_udp_connection *c,
          const uip_ipaddr_t *sender_addr,
@@ -62,6 +74,8 @@ udp_rx_callback(struct simple_udp_connection *c,
          uint16_t datalen)
 {
   uint16_t tempdata;
+  uint8_t hops;
+  leds_off(LEDS_RED);
 
   LOG_INFO("Received request '%u' ", datalen);
   LOG_INFO("from ");
@@ -69,16 +83,27 @@ udp_rx_callback(struct simple_udp_connection *c,
   LOG_INFO_("\n");
 
   printf("%u ", datalen);
-  printf("%04x ", sender_addr->u8[14] + (sender_addr->u8[15] << 8));
+  printf("%02x%02x ", sender_addr->u8[14],sender_addr->u8[15]);
 
+  hops = uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1;
+  printf("%d ", hops);
 
-  for(int i=0; i<(uip_datalen()-2)/2; i++)
+  memcpy(&tempdata , data, sizeof(uint16_t));
+  data+=sizeof(uint16_t);
+  printf("%u ",tempdata);
+
+  memcpy(&tempdata , data, sizeof(uint16_t));
+  data+=sizeof(uint16_t);
+  printf("%x ",tempdata);
+
+  for(int i=0; i<(datalen/2)-2; i++)
   {
     memcpy(&tempdata , data, sizeof(uint16_t));
     data+=sizeof(uint16_t);
     printf("%u ",tempdata);
   }
-
+  printf("\n");
+  leds_blink();
 
 
 #if WITH_SERVER_REPLY
@@ -102,6 +127,8 @@ PROCESS_THREAD(udp_server_process, ev, data)
   }
 
   NETSTACK_MAC.on();
+  leds_on(LEDS_RED);
+
 
   /* Initialize UDP connection */
   simple_udp_register(&udp_conn, UDP_SERVER_PORT, NULL,
