@@ -28,12 +28,53 @@
 static struct simple_udp_connection udp_conn;
 
 #define START_INTERVAL		(15 * CLOCK_SECOND)
-#define SEND_INTERVAL		  (5 * CLOCK_SECOND)
+#define POLLING_INTERVAL  (1 * CLOCK_SECOND)
 
-uint8_t temp_HI =0;
-uint8_t temp_LO =0;
+typedef struct register_type {
+  unsigned char HI;
+  unsigned char LO;
+} register_type_t;
+
+static register_type_t tempReg[] = {
+  {0x25, 0x80}, //0 baudrate
+  {0x00, 0x08}, //1 bitLen
+  {0x00, 0x00}, //2 parity
+  {0x00, 0x01}, //3 stopBit
+  {0x25, 0x80}, //4 baudrate
+  {0x00, 0x80}, //5 bitLen
+  {0x00, 0x00}, //6 parity
+  {0x00, 0x01}, //7 stopBit
+  {0x00, 0x14}, //8 param1
+  {0x00, 0x1e}, //9 param2
+  {0x00, 0x05}, //10 sampleRate
+  {0x00, 0x00}, //11 null
+  {0x00, 0x00}, //12 null
+  {0x00, 0x00}, //13 null
+  {0x00, 0x00}, //14 null
+  {0x02, 0x58}, //15 AlmTmpLv
+  {0x00, 0x01}, //16 AlmTmpLvPoint
+  {0x00, 0x01}, //17 AlmAllOn
+  {0x01, 0x45}, //18 TmpValue
+  {0x00, 0x01}, //19 TmpValue_point
+  {0x01, 0x4A}, //20 BattMax
+  {0x00, 0x02}, //21 BattMaxPoint
+  {0x00, 0x52}, //22 BattPct
+  {0x00, 0x0A}, //23 PWM_LED_Freq
+  {0x00, 0x14}, //24 PWM_LED_Duty
+  {0x00, 0x0F}, //25 PWM_Buzz_Freq
+  {0x00, 0x14}, //26 PWM_Buzz_Duty
+  {0x00, 0x00}, //27 LED_Force
+  {0x00, 0x00}, //28 Buzz_Force
+  {0x00, 0x00}, //29 BTN_S
+  {0x00, 0x01}, //30 BTN_M
+  {0x00, 0x00}, //31 BTN_L
+  {0x00, 0x01}, //32 S7S_Force
+  {0x04, 0xD2}, //33 S7S_Value
+  {0x00, 0x02}, //34 S7S_Point
+};
 
 uip_ipaddr_t dest_ipaddr;
+static uint16_t sendRate;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(udp_client_process, "UDP client");
@@ -92,7 +133,7 @@ collect_common_send(void)
   uint16_t parent_etx;
   uint16_t rtmetric;
   uint16_t num_neighbors;
-  int16_t battery =0;
+  // int16_t battery =0;
   int16_t parent_rssi =0;
 
   rpl_parent_t *preferred_parent;
@@ -149,57 +190,100 @@ collect_common_send(void)
     msg.msg.current_rtmetric = rtmetric;
     msg.msg.num_neighbors = num_neighbors;
     msg.msg.parent_rssi = parent_rssi;
-    msg.msg.battery = 20;
-    msg.msg.ext_tempature_value = 20;
+    msg.msg.battery = tempReg[22].HI<<8|tempReg[22].LO;
+    msg.msg.ext_tempature_value = tempReg[18].HI<<8|tempReg[18].LO;
     msg.msg.int_tempature_value = 20;
 
     printf("parent'%x' \n", msg.msg.parent);
     printf("parent_etx'%u' \n", msg.msg.parent_etx);
     printf("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
     printf("num_neighbors'%u' \n", msg.msg.num_neighbors);
-    printf("battery'%d' \n", battery);
+    printf("battery'%d' \n", msg.msg.battery);
     printf("parent_rssi'%d' \n\n", parent_rssi);
     simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
     leds_blink();
 }
-
 /*---------------------------------------------------------------------------*/
-void sendModbusRespPacket(unsigned char* packet)
+void ResponseReadPacket(unsigned char* packet)
 {
+  int16_t address=modbus_get_int16(packet[2], packet[3]);
   int16_t len=modbus_get_int16(packet[4], packet[5]);
   
   unsigned char respPacket[len*2+3];
   memset(&respPacket, 0, sizeof(respPacket));
 
+  printf("ask adress%d len %d\n", address, len);
+
+  respPacket[0] = packet[0];  //address
+  respPacket[1] = packet[1];  //function
+  respPacket[2] = len*2;      //bytecount
+  for(int i =0; i<len; i++)
+  {
+    respPacket[i*2+3] = tempReg[address+i].HI;
+    respPacket[i*2+4] = tempReg[address+i].LO;
+  }
+
+  printf("bytecount %d %d %d\n", len, respPacket[2], sizeof(respPacket));
+  for(int i = 0; i < sizeof(respPacket); i++) {
+    printf("%02x", respPacket[i]);
+  }
+  printf("\n\r");
+
+  int hasSend= modbus_send_response_packet(respPacket, len*2+3);
+  
+  if(hasSend!=-1)
+  {
+    printf("send Response success!\n");
+  }
+}
+/*---------------------------------------------------------------------------*/
+void ResponseWritePacket(unsigned char* packet)
+{
+  unsigned char respPacket[6];
+  memset(&respPacket, 0, sizeof(respPacket));
+
+  int16_t address=modbus_get_int16(packet[2], packet[3]);
+
+  printf("BEFORE temp_HI: %02x temp_LO: %02x\n", tempReg[address].HI, tempReg[address].LO);
+
+  respPacket[0] = packet[0];  //address
+  respPacket[1] = packet[1];  //function
+  respPacket[2] = packet[2];  //startAddressHI
+  respPacket[3] = packet[3];  //startAddressLO
+  tempReg[address].HI = packet[4];
+  tempReg[address].LO = packet[5];
+  respPacket[4] = tempReg[address].HI;     //dataHI
+  respPacket[5] = tempReg[address].LO;     //dataLO
+
+  printf("After temp_HI: %02x temp_LO: %02x\n", tempReg[address].HI, tempReg[address].LO);
+
+
+  for(int i = 0; i < sizeof(respPacket); i++) {
+    printf("%02x", respPacket[i]);
+  }
+  printf("\n\r");
+
+  int hasSend= modbus_send_response_packet(respPacket, 6);
+  
+  if(hasSend!=-1)
+  {
+    printf("send Response success!\n");
+  }
+
+}
+/*---------------------------------------------------------------------------*/
+void sendModbusRespPacket(unsigned char* packet)
+{
+
   if(packet[1]==MODBUS_RD_HOLD_REG)
   {
-    int16_t len=modbus_get_int16(packet[4], packet[5]);
-    
-    unsigned char respPacket[len*2+3];
-    memset(&respPacket, 0, sizeof(respPacket));
-
-    respPacket[0] = packet[0];  //address
-    respPacket[1] = packet[1];  //function
-    respPacket[2] = len*2;      //bytecount
-    for(int i =0; i<len; i++)
-    {
-      respPacket[i*2+3] = 0;
-      respPacket[i*2+4] = i;
-    }
-
-    printf("bytecount %d %d %d\n", len, respPacket[2], sizeof(respPacket));
-    for(int i = 0; i < sizeof(respPacket); i++) {
-      printf("%02x", respPacket[i]);
-    }
-    printf("\n\r");
-
-    int hasSend= modbus_send_response_packet(respPacket, len*2+3);
-    
-    if(hasSend!=-1)
-    {
-      printf("send Response success!\n");
-    }
+    ResponseReadPacket(packet);
   }
+  else if(packet[1]==MODBUS_WR_SINGLE_REG)
+  {
+    ResponseWritePacket(packet);
+  }
+
 }
 
 /*---------------------------------------------------------------------------*/
@@ -254,7 +338,8 @@ void readDataFromModbus()
 PROCESS_THREAD(udp_client_process, ev, data)
 {
   static struct etimer periodic_timer;
-  static unsigned count;
+  static uint16_t count=0;
+  sendRate = tempReg[10].HI<<8|tempReg[10].LO;
   // static char str[32];
   // uip_ipaddr_t dest_ipaddr;
   int is_coordinator;
@@ -274,29 +359,32 @@ PROCESS_THREAD(udp_client_process, ev, data)
   simple_udp_register(&udp_conn, UDP_CLIENT_PORT, NULL,
                       UDP_SERVER_PORT, udp_rx_callback);
 
-  etimer_set(&periodic_timer, random_rand() % SEND_INTERVAL);
+  etimer_set(&periodic_timer, random_rand() % POLLING_INTERVAL);
   while(1) {
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     readDataFromModbus();
-
-    if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dest_ipaddr)) {
-      /* Send to DAG root */
-      LOG_INFO("Sending request %u to ", count);
-      LOG_INFO_6ADDR(&dest_ipaddr);
-      LOG_INFO_("\n");
-      leds_off(LEDS_RED);
-      // snprintf(str, sizeof(str), "hello %d", count);
-      // simple_udp_sendto(&udp_conn, str, strlen(str), &dest_ipaddr);
-      collect_common_send();
-      count++;
-    } else {
-      leds_on(LEDS_RED);
-      LOG_INFO("Not reachable yet\n");
+    count++;
+    if(count==sendRate){
+      if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dest_ipaddr)) {
+        /* Send to DAG root */
+        LOG_INFO("Sending request %u to ", count);
+        LOG_INFO_6ADDR(&dest_ipaddr);
+        LOG_INFO_("\n");
+        leds_off(LEDS_RED);
+        // snprintf(str, sizeof(str), "hello %d", count);
+        // simple_udp_sendto(&udp_conn, str, strlen(str), &dest_ipaddr);
+        collect_common_send();
+      } else {
+        leds_on(LEDS_RED);
+        LOG_INFO("Not reachable yet\n");
+      }
+      count=0;
     }
 
     /* Add some jitter */
-    etimer_set(&periodic_timer, SEND_INTERVAL
-      - CLOCK_SECOND + (random_rand() % (2 * CLOCK_SECOND)));
+    // etimer_set(&periodic_timer, SEND_INTERVAL
+    //   - CLOCK_SECOND + (random_rand() % (2 * CLOCK_SECOND)));
+    etimer_set(&periodic_timer, POLLING_INTERVAL);
   }
 
   PROCESS_END();
