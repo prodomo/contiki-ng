@@ -57,6 +57,7 @@
 /* 6TiSCH minimal schedule length.
  * Larger values result in less frequent active slots: reduces capacity and saves energy. */
 #define TSCH_SCHEDULE_CONF_DEFAULT_LENGTH 3
+#define TSCH_CONF_DEFAULT_HOPPING_SEQUENCE (uint8_t[]){ 12, 16, 20, 24 }
 
 #if WITH_SECURITY
 

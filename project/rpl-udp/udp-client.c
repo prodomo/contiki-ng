@@ -15,6 +15,10 @@
 #include "dev/modbus/modbus-api.h"
 #include "dev/modbus/modbusDefines.h"
 
+#include "command-type.h"
+#include "net/link-stats.h"
+#include "dev/cc2538-sensors.h"
+
 #define LOG_MODULE "App"
 #define LOG_LEVEL LOG_LEVEL_INFO
 
@@ -91,6 +95,62 @@ leds_blink(void)
   leds_toggle(LEDS_GREEN);
 }
 /*---------------------------------------------------------------------------*/
+void setting_value(struct setting_msg msg)
+{
+
+  if(msg.setting_type == SET_TYPE_RATE && msg.sensor_tittle == SNR_TLE_DEFAULT)
+  {
+    tempReg[10].HI = ((msg.value >> 8) & 0xff);
+    tempReg[10].LO = (msg.value & 0xff);
+    printf("changing sending rate: %d\n",tempReg[10].HI<<8|tempReg[10].LO);
+  }
+  else if(msg.setting_type == SET_TYPE_THRESHOLD)
+  {
+    printf("sensor_tittle %d\n", msg.sensor_tittle);
+    switch(msg.sensor_tittle){
+      case SNR_TLE_DEFAULT:
+        break;
+      
+      case SNR_TLE_TEMPERATURE:
+        tempReg[15].HI = ((msg.value >> 8) & 0xff);
+        tempReg[15].LO = (msg.value & 0xff);
+        printf("changing temperature threshold: %d\n",tempReg[15].HI<<8|tempReg[15].LO);
+        break;
+
+      default:
+        break;
+      }
+  }
+  else{
+    return;
+  }
+
+}
+/*---------------------------------------------------------------------------*/
+void
+collect_ack_send(const uip_ipaddr_t *sender_addr,
+         uint16_t commandId)
+{
+  // printf("generate ack packet\n");
+  struct 
+  {
+    uint16_t command_id;
+    uint16_t command_type;
+    uint16_t is_received;
+  }ack;
+
+  memset(&ack, 0, sizeof(ack));
+
+  ack.command_id = commandId;
+  ack.command_type = CMD_TYPE_ACK;
+  ack.is_received = 1;
+  // printf("sizeof(ack) %d\n", sizeof(ack));
+  printf("ack: %u %u %u\n", ack.command_type, ack.command_id, ack.is_received);
+
+  printf("send ack\n");
+  simple_udp_sendto(&udp_conn, &ack, sizeof(ack), sender_addr);
+}
+/*---------------------------------------------------------------------------*/
 static void
 udp_rx_callback(struct simple_udp_connection *c,
          const uip_ipaddr_t *sender_addr,
@@ -100,8 +160,69 @@ udp_rx_callback(struct simple_udp_connection *c,
          const uint8_t *data,
          uint16_t datalen)
 {
-  LOG_INFO("Received response '%.*s' from ", datalen, (char *) data);
-  LOG_INFO_6ADDR(sender_addr);
+  struct msg{
+    uint16_t commandId;
+    uint16_t commandType;
+  };
+  struct msg msg;
+  uint16_t sensor_num = 0;
+
+  memset(&msg, 0, sizeof(msg));
+  printf("sizeof(msg) %d\n", sizeof(msg));
+
+  printf("--------------------recv data-----------------\n");
+  printf("uip_datalen %u\n",datalen);
+
+  memcpy(&msg.commandId, data, sizeof(uint16_t));
+  data+=sizeof(uint16_t);
+  memcpy(&msg.commandType, data, sizeof(uint16_t));
+  data+=sizeof(uint16_t);
+  printf("msg.commandType %u\n", msg.commandType);
+  printf("msg.commandId %u\n", msg.commandId);
+
+  if(uip_datalen()>4)
+  {
+    memcpy(&sensor_num, data, sizeof(uint16_t));
+    data+=sizeof(uint16_t);
+  }
+
+  struct setting_msg setting_msg[sensor_num];
+
+  if(sensor_num>0)
+  {
+    for(int i=0; i<sensor_num; i++)
+    {
+      memcpy(&setting_msg[i].setting_type, data, sizeof(uint16_t));
+      data+=sizeof(uint16_t);
+      memcpy(&setting_msg[i].sensor_tittle, data, sizeof(uint16_t));
+      data+=sizeof(uint16_t);
+      memcpy(&setting_msg[i].value, data, sizeof(uint16_t));
+      data+=sizeof(uint16_t);
+    }
+  }
+  switch(msg.commandType)
+  {
+    case CMD_TYPE_CONF:
+      printf("should send conf\n");
+      break;
+      
+    case CMD_TYPE_SET:
+      printf("should set value\n");
+      if(sensor_num>0)
+      {
+        for(int i=0; i<sensor_num; i++)
+        {
+          setting_value(setting_msg[i]);
+        }
+      }
+      break;
+    }
+
+  collect_ack_send(sender_addr, msg.commandId);
+  // LOG_INFO("Received response '%.*s' from ", datalen, data);
+  // LOG_INFO_6ADDR(sender_addr);
+
+
 #if LLSEC802154_CONF_ENABLED
   LOG_INFO_(" LLSEC LV:%d", uipbuf_get_attr(UIPBUF_ATTR_LLSEC_LEVEL));
 #endif
@@ -192,7 +313,7 @@ collect_common_send(void)
     msg.msg.parent_rssi = parent_rssi;
     msg.msg.battery = tempReg[22].HI<<8|tempReg[22].LO;
     msg.msg.ext_tempature_value = tempReg[18].HI<<8|tempReg[18].LO;
-    msg.msg.int_tempature_value = 20;
+    msg.msg.int_tempature_value = (uint16_t)cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
 
     printf("parent'%x' \n", msg.msg.parent);
     printf("parent_etx'%u' \n", msg.msg.parent_etx);
@@ -352,6 +473,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
   }
 
   NETSTACK_MAC.on();
+  leds_on(LEDS_RED);
 
   modbus_init();
 
