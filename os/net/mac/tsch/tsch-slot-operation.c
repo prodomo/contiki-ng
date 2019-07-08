@@ -849,8 +849,12 @@ PT_THREAD(tsch_rx_slot(struct pt *pt, struct rtimer *t))
 #endif /* LLSEC802154_ENABLED */
 
         if(frame_valid) {
-          if(linkaddr_cmp(&destination_address, &linkaddr_node_addr)
-             || linkaddr_cmp(&destination_address, &linkaddr_null)) {
+          /* Check that frome is for us or broadcast, AND that it is not from
+           * ourselves. This is for consistency with CSMA and to avoid adding
+           * ourselves to neighbor tables in case frames are being replayed. */
+          if((linkaddr_cmp(&destination_address, &linkaddr_node_addr)
+               || linkaddr_cmp(&destination_address, &linkaddr_null))
+             && !linkaddr_cmp(&source_address, &linkaddr_node_addr)) {
             int do_nack = 0;
             rx_count++;
             estimated_drift = RTIMER_CLOCK_DIFF(expected_rx_time, rx_start_time);
@@ -1079,7 +1083,7 @@ PT_THREAD(tsch_slot_operation(struct rtimer *t, void *ptr))
 
         /* A burst link was scheduled. Replay the current link at the
         next time offset */
-        if(burst_link_scheduled) {
+        if(burst_link_scheduled && current_link != NULL) {
           timeslot_diff = 1;
           backup_link = NULL;
           /* Keep track of the number of repetitions */

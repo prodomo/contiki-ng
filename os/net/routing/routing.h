@@ -29,6 +29,13 @@
  * This file is part of the Contiki operating system.
  *
  */
+/**
+ * \addtogroup net-layer
+ * @{
+ *
+ * \defgroup routing An API for routing
+ * @{
+*/
 
 /**
  * \file
@@ -119,8 +126,10 @@ struct routing_driver {
   void (* local_repair)(const char *str);
   /**
    * Removes all extension headers that pertain to the routing protocol.
+   *
+   * \return true in case of success, false otherwise
   */
-  void (* ext_header_remove)(void);
+  bool (* ext_header_remove)(void);
   /**
    * Adds/updates routing protocol extension headers to current uIP packet.
    *
@@ -176,3 +185,7 @@ struct routing_driver {
 };
 
 #endif /* ROUTING_H_ */
+/**
+ * @}
+ * @}
+ */
