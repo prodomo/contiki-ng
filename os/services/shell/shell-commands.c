@@ -68,6 +68,8 @@
 #include "net/routing/rpl-classic/rpl.h"
 #endif
 
+#include "project/rpl-udp/command-type.h"
+
 #include <stdlib.h>
 
 #define PING_TIMEOUT (5 * CLOCK_SECOND)
@@ -210,6 +212,35 @@ rpl_ocp_to_str(int ocp)
       return "Unknown";
   }
 }
+/*---------------------------------------------------------------------------*/
+static
+PT_THREAD(cmd_na(struct pt *pt, shell_output_func output, char *args))
+{
+  char *next_args;;
+
+  PT_BEGIN(pt);
+  SHELL_OUTPUT(output, "nancy_test\n");
+
+  SHELL_ARGS_INIT(args, next_args);
+
+  /* Get argument (remote IPv6) */
+  SHELL_ARGS_NEXT(args, next_args);
+
+  while(args != NULL){
+    if(!strcmp(args, "1")) {
+      SHELL_OUTPUT(output, "is 1 %s\n", args);
+    } else if(!strcmp(args, "0")) {
+      SHELL_OUTPUT(output, "is 0 %s\n", args);
+    } else {
+      SHELL_OUTPUT(output, "Invalid argument: %s\n", args);
+    }
+    serial_input(args);
+    SHELL_ARGS_NEXT(args, next_args);
+  }
+
+  PT_END(pt);
+}
+
 /*---------------------------------------------------------------------------*/
 static
 PT_THREAD(cmd_rpl_nbr(struct pt *pt, shell_output_func output, char *args))
@@ -873,6 +904,7 @@ const struct shell_command_t builtin_shell_commands[] = {
   { "reboot",               cmd_reboot,               "'> reboot': Reboot the board by watchdog_reboot()" },
   { "log",                  cmd_log,                  "'> log module level': Sets log level (0--4) for a given module (or \"all\"). For module \"mac\", level 4 also enables per-slot logging." },
   { "mac-addr",             cmd_macaddr,               "'> mac-addr': Shows the node's MAC address" },
+  { "na",                   cmd_na,                      "'>na'" },
 #if NETSTACK_CONF_WITH_IPV6
   { "ip-addr",              cmd_ipaddr,               "'> ip-addr': Shows all IPv6 addresses" },
   { "ip-nbr",               cmd_ip_neighbors,         "'> ip-nbr': Shows all IPv6 neighbors" },
