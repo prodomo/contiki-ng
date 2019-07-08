@@ -117,6 +117,42 @@ void setting_value(struct setting_msg msg)
         printf("changing temperature threshold: %d\n",tempReg[15].HI<<8|tempReg[15].LO);
         break;
 
+      case SNR_TLE_TEMPERATURE_POINT:
+        tempReg[16].HI = ((msg.value >> 8) & 0xff);
+        tempReg[16].LO = (msg.value & 0xff);
+        printf("changing temperature threshold point: %d\n",tempReg[16].HI<<8|tempReg[16].LO);
+        break;
+
+      case SNR_TLE_TEMPERATURE_ALARM:
+        tempReg[17].HI = ((msg.value >> 8) & 0xff);
+        tempReg[17].LO = (msg.value & 0xff);
+        printf("changing temperature threshold alarm: %d\n",tempReg[17].HI<<8|tempReg[17].LO);
+        break;
+
+      case SNR_TLE_LED_FORECE:
+        tempReg[27].HI = ((msg.value >> 8) & 0xff);
+        tempReg[27].LO = (msg.value & 0xff);
+        printf("changing temperature threshold alarm: %d\n",tempReg[27].HI<<8|tempReg[27].LO);
+        break;
+
+      case SNR_TLE_BUZZ_FORCE:
+        tempReg[28].HI = ((msg.value >> 8) & 0xff);
+        tempReg[28].LO = (msg.value & 0xff);
+        printf("changing temperature threshold alarm: %d\n",tempReg[28].HI<<8|tempReg[28].LO);
+        break;
+
+      case SNR_TLE_S7S_FORCE:
+        tempReg[32].HI = ((msg.value >> 8) & 0xff);
+        tempReg[32].LO = (msg.value & 0xff);
+        printf("changing temperature threshold alarm: %d\n",tempReg[32].HI<<8|tempReg[32].LO);
+        break;
+
+      case SNR_TLE_S7S_VALUE:
+        tempReg[33].HI = ((msg.value >> 8) & 0xff);
+        tempReg[33].LO = (msg.value & 0xff);
+        printf("changing temperature threshold alarm: %d\n",tempReg[33].HI<<8|tempReg[33].LO);
+        break;
+
       default:
         break;
       }
