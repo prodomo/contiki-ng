@@ -49,7 +49,7 @@
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
-#define LOG_LEVEL LOG_LEVEL_INFO
+#define LOG_LEVEL LOG_LEVEL_NONE
 
 // #define DEBUG DEBUG_PRINT
 // #include "net/ipv6/uip-debug.h"

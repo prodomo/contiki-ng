@@ -280,6 +280,10 @@ collect_common_send(void)
   uint16_t ext_tempature_value;  // =real value*100
   uint16_t int_tempature_value;  // =real value*1000
   uint16_t battery;
+  uint16_t ext_tempature_point;
+  uint16_t btn_s;
+  uint16_t btn_m;
+  uint16_t btn_l;
   };
 
   struct {
@@ -350,6 +354,10 @@ collect_common_send(void)
     msg.msg.battery = tempReg[22].HI<<8|tempReg[22].LO;
     msg.msg.ext_tempature_value = tempReg[18].HI<<8|tempReg[18].LO;
     msg.msg.int_tempature_value = (uint16_t)cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
+    msg.msg.ext_tempature_point = tempReg[19].HI<<8|tempReg[19].LO;
+    msg.msg.btn_s = tempReg[29].HI<<8|tempReg[29].LO;
+    msg.msg.btn_m = tempReg[30].HI<<8|tempReg[30].LO;
+    msg.msg.btn_l = tempReg[31].HI<<8|tempReg[31].LO;
 
     printf("parent'%x' \n", msg.msg.parent);
     printf("parent_etx'%u' \n", msg.msg.parent_etx);
@@ -357,6 +365,11 @@ collect_common_send(void)
     printf("num_neighbors'%u' \n", msg.msg.num_neighbors);
     printf("battery'%d' \n", msg.msg.battery);
     printf("parent_rssi'%d' \n\n", parent_rssi);
+    printf("ext_tempature_point'%d' \n\n", msg.msg.ext_tempature_point);
+    printf("btn_s'%d' \n", msg.msg.btn_s);
+    printf("btn_m'%d' \n", msg.msg.btn_m);
+    printf("btn_l'%d' \n", msg.msg.btn_l);
+
     simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
     leds_blink();
 }
