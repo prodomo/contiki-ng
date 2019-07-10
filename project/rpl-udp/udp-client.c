@@ -359,16 +359,16 @@ collect_common_send(void)
     msg.msg.btn_m = tempReg[30].HI<<8|tempReg[30].LO;
     msg.msg.btn_l = tempReg[31].HI<<8|tempReg[31].LO;
 
-    printf("parent'%x' \n", msg.msg.parent);
-    printf("parent_etx'%u' \n", msg.msg.parent_etx);
-    printf("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
-    printf("num_neighbors'%u' \n", msg.msg.num_neighbors);
-    printf("battery'%d' \n", msg.msg.battery);
-    printf("parent_rssi'%d' \n\n", parent_rssi);
-    printf("ext_tempature_point'%d' \n\n", msg.msg.ext_tempature_point);
-    printf("btn_s'%d' \n", msg.msg.btn_s);
-    printf("btn_m'%d' \n", msg.msg.btn_m);
-    printf("btn_l'%d' \n", msg.msg.btn_l);
+    LOG_INFO("parent'%x' \n", msg.msg.parent);
+    LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
+    LOG_INFO("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
+    LOG_INFO("num_neighbors'%u' \n", msg.msg.num_neighbors);
+    LOG_INFO("battery'%d' \n", msg.msg.battery);
+    LOG_INFO("parent_rssi'%d' \n\n", parent_rssi);
+    LOG_INFO("ext_tempature_point'%d' \n\n", msg.msg.ext_tempature_point);
+    LOG_INFO("btn_s'%d' \n", msg.msg.btn_s);
+    LOG_INFO("btn_m'%d' \n", msg.msg.btn_m);
+    LOG_INFO("btn_l'%d' \n", msg.msg.btn_l);
 
     simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
     leds_blink();
@@ -468,17 +468,17 @@ void readDataFromModbus()
   int hasErr;
 
   if(datalen <= 0) {
-    printf("RX Error...length <= 0\n"); 
+    LOG_INFO("RX Error...length <= 0\n"); 
   }
   else{
 
-    printf("Read data (%d):", datalen);
+    LOG_INFO("Read data (%d):", datalen);
     while(index < datalen/8)
     {
       for(int i = 0; i < 8; i++) {
-        printf("%02x", data[i+index*8]);
+        LOG_INFO("%02x", data[i+index*8]);
       }
-      printf("\n\r");
+      LOG_INFO("\n\r");
 
       packet[0] = data[0+index*8];           //address
       packet[1] = data[1+index*8];          //function
@@ -507,8 +507,8 @@ void readDataFromModbus()
 
 PROCESS_THREAD(udp_client_process, ev, data)
 {
-  static struct etimer periodic_timer;
-  static uint16_t count=0;
+  static struct etimer periodic_timer, send_timer;
+  // static uint16_t count=0;
   sendRate = tempReg[10].HI<<8|tempReg[10].LO;
   // static char str[32];
   // uip_ipaddr_t dest_ipaddr;
@@ -530,17 +530,24 @@ PROCESS_THREAD(udp_client_process, ev, data)
   simple_udp_register(&udp_conn, UDP_CLIENT_PORT, NULL,
                       UDP_SERVER_PORT, udp_rx_callback);
 
-  etimer_set(&periodic_timer, random_rand() % POLLING_INTERVAL);
+  etimer_set(&periodic_timer, POLLING_INTERVAL);
+  etimer_set(&send_timer, random_rand() % (sendRate*CLOCK_SECOND));
   while(1) {
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
-    readDataFromModbus();
-    count++;
-    if(count==sendRate){
+
+    PROCESS_WAIT_EVENT(); /* Same thing as PROCESS_YIELD */
+    if(etimer_expired(&periodic_timer)) {
+      /* Do the work here and restart timer to get it periodic !!! */
+      // printf("etimer expired.\n");
+      readDataFromModbus(); 
+      etimer_restart(&periodic_timer);
+    }
+    else if(etimer_expired(&send_timer))
+    {
       if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dest_ipaddr)) {
         /* Send to DAG root */
-        LOG_INFO("Sending request %u to ", count);
-        LOG_INFO_6ADDR(&dest_ipaddr);
-        LOG_INFO_("\n");
+        // LOG_INFO("Sending request %u to ", count);
+        // LOG_INFO_6ADDR(&dest_ipaddr);
+        // LOG_INFO_("\n");
         leds_off(LEDS_RED);
         // snprintf(str, sizeof(str), "hello %d", count);
         // simple_udp_sendto(&udp_conn, str, strlen(str), &dest_ipaddr);
@@ -549,13 +556,33 @@ PROCESS_THREAD(udp_client_process, ev, data)
         leds_on(LEDS_RED);
         LOG_INFO("Not reachable yet\n");
       }
-      count=0;
+      etimer_set(&send_timer, (sendRate*CLOCK_SECOND) - CLOCK_SECOND + (random_rand() % (2 * CLOCK_SECOND)));
     }
 
-    /* Add some jitter */
-    // etimer_set(&periodic_timer, SEND_INTERVAL
-    //   - CLOCK_SECOND + (random_rand() % (2 * CLOCK_SECOND)));
-    etimer_set(&periodic_timer, POLLING_INTERVAL);
+    // PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+    // readDataFromModbus();
+    // count++;
+    // if(count==sendRate){
+    //   if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dest_ipaddr)) {
+    //     /* Send to DAG root */
+    //     // LOG_INFO("Sending request %u to ", count);
+    //     // LOG_INFO_6ADDR(&dest_ipaddr);
+    //     // LOG_INFO_("\n");
+    //     leds_off(LEDS_RED);
+    //     // snprintf(str, sizeof(str), "hello %d", count);
+    //     // simple_udp_sendto(&udp_conn, str, strlen(str), &dest_ipaddr);
+    //     collect_common_send();
+    //   } else {
+    //     leds_on(LEDS_RED);
+    //     LOG_INFO("Not reachable yet\n");
+    //   }
+    //   count=0;
+    // }
+
+    // /* Add some jitter */
+    // // etimer_set(&periodic_timer, SEND_INTERVAL
+    // //   - CLOCK_SECOND + (random_rand() % (2 * CLOCK_SECOND)));
+    // etimer_set(&periodic_timer, POLLING_INTERVAL);
   }
 
   PROCESS_END();
