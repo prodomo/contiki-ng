@@ -50,8 +50,8 @@ static register_type_t tempReg[] = {
   {0x00, 0x01}, //7 stopBit
   {0x00, 0x14}, //8 param1
   {0x00, 0x1e}, //9 param2
-  {0x00, 0x05}, //10 sampleRate
-  {0x00, 0x00}, //11 null
+  {0x00, 0x05}, //10 PacketRate
+  {0x00, 0x05}, //11 SampleRate
   {0x00, 0x00}, //12 null
   {0x00, 0x00}, //13 null
   {0x00, 0x00}, //14 null
@@ -270,7 +270,8 @@ void
 collect_common_send(void)
 {
   static uint16_t seqno;
-  struct collect_data_msg {
+  struct{
+  uint16_t seqno;
   uint16_t parent;
   uint16_t parent_etx;
   uint16_t current_rtmetric;
@@ -284,12 +285,9 @@ collect_common_send(void)
   uint16_t btn_s;
   uint16_t btn_m;
   uint16_t btn_l;
-  };
+  }msg;
 
-  struct {
-    uint16_t seqno;
-    struct collect_data_msg msg;
-  } msg;
+
   /* struct collect_neighbor *n; */
   uint16_t parent_etx;
   uint16_t rtmetric;
@@ -339,7 +337,7 @@ collect_common_send(void)
     num_neighbors = 0;
   }
 
-    memcpy(&msg.msg.parent, &parent.u8[LINKADDR_SIZE - 2], 2);
+    memcpy(&msg.parent, &parent.u8[LINKADDR_SIZE - 2], 2);
     seqno++;
     if(seqno >=65535) {
       /* Wrap to 128 to identify restarts */
@@ -347,28 +345,28 @@ collect_common_send(void)
     }
     msg.seqno = seqno;
 
-    msg.msg.parent_etx = parent_etx;
-    msg.msg.current_rtmetric = rtmetric;
-    msg.msg.num_neighbors = num_neighbors;
-    msg.msg.parent_rssi = parent_rssi;
-    msg.msg.battery = tempReg[22].HI<<8|tempReg[22].LO;
-    msg.msg.ext_tempature_value = tempReg[18].HI<<8|tempReg[18].LO;
-    msg.msg.int_tempature_value = (uint16_t)cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
-    msg.msg.ext_tempature_point = tempReg[19].HI<<8|tempReg[19].LO;
-    msg.msg.btn_s = tempReg[29].HI<<8|tempReg[29].LO;
-    msg.msg.btn_m = tempReg[30].HI<<8|tempReg[30].LO;
-    msg.msg.btn_l = tempReg[31].HI<<8|tempReg[31].LO;
+    msg.parent_etx = parent_etx;
+    msg.current_rtmetric = rtmetric;
+    msg.num_neighbors = num_neighbors;
+    msg.parent_rssi = parent_rssi;
+    msg.battery = tempReg[22].HI<<8|tempReg[22].LO;
+    msg.ext_tempature_value = tempReg[18].HI<<8|tempReg[18].LO;
+    msg.int_tempature_value = (uint16_t)cc2538_temp_sensor.value(CC2538_SENSORS_VALUE_TYPE_CONVERTED);
+    msg.ext_tempature_point = tempReg[19].HI<<8|tempReg[19].LO;
+    msg.btn_s = tempReg[29].HI<<8|tempReg[29].LO;
+    msg.btn_m = tempReg[30].HI<<8|tempReg[30].LO;
+    msg.btn_l = tempReg[31].HI<<8|tempReg[31].LO;
 
-    LOG_INFO("parent'%x' \n", msg.msg.parent);
-    LOG_INFO("parent_etx'%u' \n", msg.msg.parent_etx);
-    LOG_INFO("current_rtmetric'%u' \n", msg.msg.current_rtmetric);
-    LOG_INFO("num_neighbors'%u' \n", msg.msg.num_neighbors);
-    LOG_INFO("battery'%d' \n", msg.msg.battery);
+    LOG_INFO("parent'%x' \n", msg.parent);
+    LOG_INFO("parent_etx'%u' \n", msg.parent_etx);
+    LOG_INFO("current_rtmetric'%u' \n", msg.current_rtmetric);
+    LOG_INFO("num_neighbors'%u' \n", msg.num_neighbors);
+    LOG_INFO("battery'%d' \n", msg.battery);
     LOG_INFO("parent_rssi'%d' \n\n", parent_rssi);
-    LOG_INFO("ext_tempature_point'%d' \n\n", msg.msg.ext_tempature_point);
-    LOG_INFO("btn_s'%d' \n", msg.msg.btn_s);
-    LOG_INFO("btn_m'%d' \n", msg.msg.btn_m);
-    LOG_INFO("btn_l'%d' \n", msg.msg.btn_l);
+    LOG_INFO("ext_tempature_point'%d' \n\n", msg.ext_tempature_point);
+    LOG_INFO("btn_s'%d' \n", msg.btn_s);
+    LOG_INFO("btn_m'%d' \n", msg.btn_m);
+    LOG_INFO("btn_l'%d' \n", msg.btn_l);
 
     simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
     leds_blink();
