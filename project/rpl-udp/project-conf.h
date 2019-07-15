@@ -49,7 +49,7 @@
 /*******************************************************/
 
 /* IEEE802.15.4 PANID */
-#define IEEE802154_CONF_PANID 0x81a5
+#define IEEE802154_CONF_PANID 0x8150
 #define TSCH_CONF_JOIN_MY_PANID_ONLY 1
 
 /* Do not start TSCH at init, wait for NETSTACK_MAC.on() */

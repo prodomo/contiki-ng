@@ -145,7 +145,7 @@ modbus_get_int16(unsigned char first , unsigned char second) {
 /********************************************************************/
 int modbus_send_response_packet(unsigned char* packet, unsigned char len)
 {
-  printf("modbus_send_response_packet %d\n", len);
+  // printf("modbus_send_response_packet %d\n", len);
   return modbusSendQuery(packet , len, 1);
 }
 /********************************************************************/

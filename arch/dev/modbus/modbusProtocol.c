@@ -63,7 +63,8 @@ int modbusSendQuery(unsigned char *data, unsigned char dataLen,
 		    unsigned char hasCRC)
 {
   unsigned int crc;
-  int sendStatus, i;
+  int sendStatus;
+  // int i;
 
   if(hasCRC) {
     crc = modbusCRC(data, dataLen);
@@ -72,20 +73,20 @@ int modbusSendQuery(unsigned char *data, unsigned char dataLen,
     dataLen += MODBUS_CRC_LENGTH;
   }
 
-   printf("TX data (%d):", dataLen); 
-   for(i = 0; i < dataLen; i++) { 
-     printf("%02x", data[i]); 
-   } 
-   printf("\n\r"); 
+   // printf("TX data (%d):", dataLen); 
+   // for(i = 0; i < dataLen; i++) { 
+   //   printf("%02x", data[i]); 
+   // } 
+   // printf("\n\r"); 
   
-  clock_wait(2);
+  clock_wait(1);
 
   /* reset input buffer before transmit */
   rs485_input_reset();
   sendStatus = rs485_transmit(data, dataLen);
 
   /* wait some time for reception... */
-  clock_wait(5);
+  clock_wait(3);
 
   return sendStatus;
 }
@@ -263,7 +264,8 @@ int modbusSendResponse(unsigned char *data, unsigned char dataLen,
         unsigned char hasCRC)
 {
   unsigned int crc;
-  int sendStatus, i;
+  int sendStatus;
+  // int i;
 
   if(hasCRC) {
     crc = modbusCRC(data, dataLen);
@@ -272,11 +274,11 @@ int modbusSendResponse(unsigned char *data, unsigned char dataLen,
     dataLen += MODBUS_CRC_LENGTH;
   }
 
-   printf("TX data (%d):", dataLen); 
-   for(i = 0; i < dataLen; i++) { 
-     printf("%02x", data[i]); 
-   } 
-   printf("\n\r"); 
+   // printf("TX data (%d):", dataLen); 
+   // for(i = 0; i < dataLen; i++) { 
+   //   printf("%02x", data[i]); 
+   // } 
+   // printf("\n\r"); 
   
   clock_wait(2);
 
@@ -285,7 +287,7 @@ int modbusSendResponse(unsigned char *data, unsigned char dataLen,
   sendStatus = rs485_transmit(data, dataLen);
 
   /* wait some time for reception... */
-  clock_wait(5);
+  // clock_wait(5);
 
   return sendStatus;
 }

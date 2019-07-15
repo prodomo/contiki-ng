@@ -102,11 +102,11 @@ void setting_value(struct setting_msg msg)
   {
     tempReg[10].HI = ((msg.value >> 8) & 0xff);
     tempReg[10].LO = (msg.value & 0xff);
-    printf("changing sending rate: %d\n",tempReg[10].HI<<8|tempReg[10].LO);
+    LOG_INFO("changing sending rate: %d\n",tempReg[10].HI<<8|tempReg[10].LO);
   }
   else if(msg.setting_type == SET_TYPE_THRESHOLD)
   {
-    printf("sensor_tittle %d\n", msg.sensor_tittle);
+    // LOG_INFO("sensor_tittle %d\n", msg.sensor_tittle);
     switch(msg.sensor_tittle){
       case SNR_TLE_DEFAULT:
         break;
@@ -114,43 +114,43 @@ void setting_value(struct setting_msg msg)
       case SNR_TLE_TEMPERATURE:
         tempReg[15].HI = ((msg.value >> 8) & 0xff);
         tempReg[15].LO = (msg.value & 0xff);
-        printf("changing temperature threshold: %d\n",tempReg[15].HI<<8|tempReg[15].LO);
+        LOG_INFO("changing temperature threshold: %d\n",tempReg[15].HI<<8|tempReg[15].LO);
         break;
 
       case SNR_TLE_TEMPERATURE_POINT:
         tempReg[16].HI = ((msg.value >> 8) & 0xff);
         tempReg[16].LO = (msg.value & 0xff);
-        printf("changing temperature threshold point: %d\n",tempReg[16].HI<<8|tempReg[16].LO);
+        LOG_INFO("changing temperature threshold point: %d\n",tempReg[16].HI<<8|tempReg[16].LO);
         break;
 
       case SNR_TLE_TEMPERATURE_ALARM:
         tempReg[17].HI = ((msg.value >> 8) & 0xff);
         tempReg[17].LO = (msg.value & 0xff);
-        printf("changing temperature threshold alarm: %d\n",tempReg[17].HI<<8|tempReg[17].LO);
+        LOG_INFO("changing temperature threshold alarm: %d\n",tempReg[17].HI<<8|tempReg[17].LO);
         break;
 
       case SNR_TLE_LED_FORECE:
         tempReg[27].HI = ((msg.value >> 8) & 0xff);
         tempReg[27].LO = (msg.value & 0xff);
-        printf("changing temperature threshold alarm: %d\n",tempReg[27].HI<<8|tempReg[27].LO);
+        LOG_INFO("changing temperature threshold alarm: %d\n",tempReg[27].HI<<8|tempReg[27].LO);
         break;
 
       case SNR_TLE_BUZZ_FORCE:
         tempReg[28].HI = ((msg.value >> 8) & 0xff);
         tempReg[28].LO = (msg.value & 0xff);
-        printf("changing temperature threshold alarm: %d\n",tempReg[28].HI<<8|tempReg[28].LO);
+        LOG_INFO("changing temperature threshold alarm: %d\n",tempReg[28].HI<<8|tempReg[28].LO);
         break;
 
       case SNR_TLE_S7S_FORCE:
         tempReg[32].HI = ((msg.value >> 8) & 0xff);
         tempReg[32].LO = (msg.value & 0xff);
-        printf("changing temperature threshold alarm: %d\n",tempReg[32].HI<<8|tempReg[32].LO);
+        LOG_INFO("changing temperature threshold alarm: %d\n",tempReg[32].HI<<8|tempReg[32].LO);
         break;
 
       case SNR_TLE_S7S_VALUE:
         tempReg[33].HI = ((msg.value >> 8) & 0xff);
         tempReg[33].LO = (msg.value & 0xff);
-        printf("changing temperature threshold alarm: %d\n",tempReg[33].HI<<8|tempReg[33].LO);
+        LOG_INFO("changing temperature threshold alarm: %d\n",tempReg[33].HI<<8|tempReg[33].LO);
         break;
 
       default:
@@ -181,9 +181,9 @@ collect_ack_send(const uip_ipaddr_t *sender_addr,
   ack.command_type = CMD_TYPE_ACK;
   ack.is_received = 1;
   // printf("sizeof(ack) %d\n", sizeof(ack));
-  printf("ack: %u %u %u\n", ack.command_type, ack.command_id, ack.is_received);
+  LOG_INFO("ack: %u %u %u\n", ack.command_type, ack.command_id, ack.is_received);
 
-  printf("send ack\n");
+  LOG_INFO("send ack\n");
   simple_udp_sendto(&udp_conn, &ack, sizeof(ack), sender_addr);
 }
 /*---------------------------------------------------------------------------*/
@@ -204,17 +204,17 @@ udp_rx_callback(struct simple_udp_connection *c,
   uint16_t sensor_num = 0;
 
   memset(&msg, 0, sizeof(msg));
-  printf("sizeof(msg) %d\n", sizeof(msg));
+  // printf("sizeof(msg) %d\n", sizeof(msg));
 
-  printf("--------------------recv data-----------------\n");
-  printf("uip_datalen %u\n",datalen);
+  // printf("--------------------recv data-----------------\n");
+  // printf("uip_datalen %u\n",datalen);
 
   memcpy(&msg.commandId, data, sizeof(uint16_t));
   data+=sizeof(uint16_t);
   memcpy(&msg.commandType, data, sizeof(uint16_t));
   data+=sizeof(uint16_t);
-  printf("msg.commandType %u\n", msg.commandType);
-  printf("msg.commandId %u\n", msg.commandId);
+  LOG_INFO("msg.commandType %u\n", msg.commandType);
+  LOG_INFO("msg.commandId %u\n", msg.commandId);
 
   if(uip_datalen()>4)
   {
@@ -239,11 +239,11 @@ udp_rx_callback(struct simple_udp_connection *c,
   switch(msg.commandType)
   {
     case CMD_TYPE_CONF:
-      printf("should send conf\n");
+      LOG_INFO("should send conf\n");
       break;
       
     case CMD_TYPE_SET:
-      printf("should set value\n");
+      LOG_INFO("should set value\n");
       if(sensor_num>0)
       {
         for(int i=0; i<sensor_num; i++)
@@ -259,10 +259,10 @@ udp_rx_callback(struct simple_udp_connection *c,
   // LOG_INFO_6ADDR(sender_addr);
 
 
-#if LLSEC802154_CONF_ENABLED
-  LOG_INFO_(" LLSEC LV:%d", uipbuf_get_attr(UIPBUF_ATTR_LLSEC_LEVEL));
-#endif
-  LOG_INFO_("\n");
+// #if LLSEC802154_CONF_ENABLED
+//   LOG_INFO_(" LLSEC LV:%d", uipbuf_get_attr(UIPBUF_ATTR_LLSEC_LEVEL));
+// #endif
+//   LOG_INFO_("\n");
 
 }
 /*---------------------------------------------------------------------------*/
@@ -327,10 +327,10 @@ collect_common_send(void)
       parent_rssi=stats->rssi;
     }
     rtmetric = dag->rank;
-    LOG_INFO("rtmetric'%u' \n", rtmetric);
+    // LOG_INFO("rtmetric'%u' \n", rtmetric);
     // beacon_interval = (uint16_t) ((2L << dag->instance->dio_intcurrent) / 1000);
     num_neighbors = uip_ds6_nbr_num();
-    LOG_INFO("num_neighbors'%u' \n", num_neighbors);
+    // LOG_INFO("num_neighbors'%u' \n", num_neighbors);
   } else {
     rtmetric = 0;
     // beacon_interval = 0;
@@ -357,12 +357,12 @@ collect_common_send(void)
     msg.btn_m = tempReg[30].HI<<8|tempReg[30].LO;
     msg.btn_l = tempReg[31].HI<<8|tempReg[31].LO;
 
-    LOG_INFO("parent'%x' \n", msg.parent);
-    LOG_INFO("parent_etx'%u' \n", msg.parent_etx);
-    LOG_INFO("current_rtmetric'%u' \n", msg.current_rtmetric);
-    LOG_INFO("num_neighbors'%u' \n", msg.num_neighbors);
+    // LOG_INFO("parent'%x' \n", msg.parent);
+    // LOG_INFO("parent_etx'%u' \n", msg.parent_etx);
+    // LOG_INFO("current_rtmetric'%u' \n", msg.current_rtmetric);
+    // LOG_INFO("num_neighbors'%u' \n", msg.num_neighbors);
     LOG_INFO("battery'%d' \n", msg.battery);
-    LOG_INFO("parent_rssi'%d' \n\n", parent_rssi);
+    // LOG_INFO("parent_rssi'%d' \n\n", parent_rssi);
     LOG_INFO("ext_tempature_point'%d' \n\n", msg.ext_tempature_point);
     LOG_INFO("btn_s'%d' \n", msg.btn_s);
     LOG_INFO("btn_m'%d' \n", msg.btn_m);
@@ -380,7 +380,7 @@ void ResponseReadPacket(unsigned char* packet)
   unsigned char respPacket[len*2+3];
   memset(&respPacket, 0, sizeof(respPacket));
 
-  printf("ask adress%d len %d\n", address, len);
+  // LOG_INFO("ask adress%d len %d\n", address, len);
 
   respPacket[0] = packet[0];  //address
   respPacket[1] = packet[1];  //function
@@ -391,17 +391,17 @@ void ResponseReadPacket(unsigned char* packet)
     respPacket[i*2+4] = tempReg[address+i].LO;
   }
 
-  printf("bytecount %d %d %d\n", len, respPacket[2], sizeof(respPacket));
-  for(int i = 0; i < sizeof(respPacket); i++) {
-    printf("%02x", respPacket[i]);
-  }
-  printf("\n\r");
+  // LOG_INFO("bytecount %d %d %d\n", len, respPacket[2], sizeof(respPacket));
+  // for(int i = 0; i < sizeof(respPacket); i++) {
+  //   LOG_INFO("%02x", respPacket[i]);
+  // }
+  // LOG_INFO("\n\r");
 
   int hasSend= modbus_send_response_packet(respPacket, len*2+3);
   
   if(hasSend!=-1)
   {
-    printf("send Response success!\n");
+    LOG_INFO("send Response success!\n");
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -412,7 +412,7 @@ void ResponseWritePacket(unsigned char* packet)
 
   int16_t address=modbus_get_int16(packet[2], packet[3]);
 
-  printf("BEFORE temp_HI: %02x temp_LO: %02x\n", tempReg[address].HI, tempReg[address].LO);
+  // LOG_INFO("BEFORE temp_HI: %02x temp_LO: %02x\n", tempReg[address].HI, tempReg[address].LO);
 
   respPacket[0] = packet[0];  //address
   respPacket[1] = packet[1];  //function
@@ -423,19 +423,19 @@ void ResponseWritePacket(unsigned char* packet)
   respPacket[4] = tempReg[address].HI;     //dataHI
   respPacket[5] = tempReg[address].LO;     //dataLO
 
-  printf("After temp_HI: %02x temp_LO: %02x\n", tempReg[address].HI, tempReg[address].LO);
+  // LOG_INFO("After temp_HI: %02x temp_LO: %02x\n", tempReg[address].HI, tempReg[address].LO);
 
 
-  for(int i = 0; i < sizeof(respPacket); i++) {
-    printf("%02x", respPacket[i]);
-  }
-  printf("\n\r");
+  // for(int i = 0; i < sizeof(respPacket); i++) {
+  //   printf("%02x", respPacket[i]);
+  // }
+  // printf("\n\r");
 
   int hasSend= modbus_send_response_packet(respPacket, 6);
   
   if(hasSend!=-1)
   {
-    printf("send Response success!\n");
+    // LOG_INFO("send Response success!\n");
   }
 
 }
@@ -466,17 +466,17 @@ void readDataFromModbus()
   int hasErr;
 
   if(datalen <= 0) {
-    LOG_INFO("RX Error...length <= 0\n"); 
+    // LOG_INFO("RX Error...length <= 0\n"); 
   }
   else{
 
-    LOG_INFO("Read data (%d):", datalen);
+    // LOG_INFO("Read data (%d):", datalen);
     while(index < datalen/8)
     {
-      for(int i = 0; i < 8; i++) {
-        LOG_INFO("%02x", data[i+index*8]);
-      }
-      LOG_INFO("\n\r");
+      // for(int i = 0; i < 8; i++) {
+      //   LOG_INFO("%02x", data[i+index*8]);
+      // }
+      // LOG_INFO("\n\r");
 
       packet[0] = data[0+index*8];           //address
       packet[1] = data[1+index*8];          //function
@@ -490,7 +490,7 @@ void readDataFromModbus()
 
       if(hasErr==-1)
       {
-        printf("CRC error\n");
+        LOG_INFO("CRC error\n");
       }
       else{
         sendModbusRespPacket(packet);
