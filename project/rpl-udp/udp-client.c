@@ -52,7 +52,7 @@ static register_type_t tempReg[] = {
   {0x00, 0x1e}, //9 param2
   {0x00, 0x05}, //10 PacketRate
   {0x00, 0x05}, //11 SampleRate
-  {0x00, 0x00}, //12 null
+  {0x00, 0x00}, //12 connected
   {0x00, 0x00}, //13 null
   {0x00, 0x00}, //14 null
   {0x02, 0x58}, //15 AlmTmpLv
@@ -546,12 +546,16 @@ PROCESS_THREAD(udp_client_process, ev, data)
         // LOG_INFO("Sending request %u to ", count);
         // LOG_INFO_6ADDR(&dest_ipaddr);
         // LOG_INFO_("\n");
+        tempReg[12].LO = 0x01; //connected 
+        // LOG_INFO("Connected_HI: %02x Connected_LO: %02x\n", tempReg[12].HI, tempReg[12].LO);
         leds_off(LEDS_RED);
         // snprintf(str, sizeof(str), "hello %d", count);
         // simple_udp_sendto(&udp_conn, str, strlen(str), &dest_ipaddr);
         collect_common_send();
       } else {
         leds_on(LEDS_RED);
+        tempReg[12].LO = 0x00; //connected 
+        // LOG_INFO("Connected_HI: %02x Connected_LO: %02x\n", tempReg[12].HI, tempReg[12].LO);
         LOG_INFO("Not reachable yet\n");
       }
       etimer_set(&send_timer, (sendRate*CLOCK_SECOND) - CLOCK_SECOND + (random_rand() % (2 * CLOCK_SECOND)));
