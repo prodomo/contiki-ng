@@ -52,7 +52,7 @@ static register_type_t tempReg[] = {
   {0x00, 0x1e}, //9 param2
   {0x00, 0x05}, //10 PacketRate
   {0x00, 0x05}, //11 SampleRate
-  {0x00, 0x00}, //12 connected
+  {0x00, 0x00}, //12 null
   {0x00, 0x00}, //13 null
   {0x00, 0x00}, //14 null
   {0x02, 0x58}, //15 AlmTmpLv
@@ -75,6 +75,12 @@ static register_type_t tempReg[] = {
   {0x00, 0x01}, //32 S7S_Force
   {0x04, 0xD2}, //33 S7S_Value
   {0x00, 0x02}, //34 S7S_Point
+  {0x00, 0x00}, //35 null
+  {0x00, 0x00}, //36 null
+  {0x00, 0x00}, //37 null
+  {0x00, 0x00}, //38 null
+  {0x00, 0x00}, //39 null
+  {0x00, 0x00}, //40 SysLink
 };
 
 uip_ipaddr_t dest_ipaddr;
@@ -380,7 +386,7 @@ void ResponseReadPacket(unsigned char* packet)
   unsigned char respPacket[len*2+3];
   memset(&respPacket, 0, sizeof(respPacket));
 
-  // LOG_INFO("ask adress%d len %d\n", address, len);
+  LOG_INFO("ask adress%d len %d\n", address, len);
 
   respPacket[0] = packet[0];  //address
   respPacket[1] = packet[1];  //function
@@ -391,11 +397,11 @@ void ResponseReadPacket(unsigned char* packet)
     respPacket[i*2+4] = tempReg[address+i].LO;
   }
 
-  // LOG_INFO("bytecount %d %d %d\n", len, respPacket[2], sizeof(respPacket));
-  // for(int i = 0; i < sizeof(respPacket); i++) {
-  //   LOG_INFO("%02x", respPacket[i]);
-  // }
-  // LOG_INFO("\n\r");
+  LOG_INFO("bytecount %d %d %d\n", len, respPacket[2], sizeof(respPacket));
+  for(int i = 0; i < sizeof(respPacket); i++) {
+    printf("%02x", respPacket[i]);
+  }
+  printf("\n\r");
 
   int hasSend= modbus_send_response_packet(respPacket, len*2+3);
   
@@ -546,7 +552,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
         // LOG_INFO("Sending request %u to ", count);
         // LOG_INFO_6ADDR(&dest_ipaddr);
         // LOG_INFO_("\n");
-        tempReg[12].LO = 0x01; //connected 
+        tempReg[40].LO = 0x01; //connected 
         // LOG_INFO("Connected_HI: %02x Connected_LO: %02x\n", tempReg[12].HI, tempReg[12].LO);
         leds_off(LEDS_RED);
         // snprintf(str, sizeof(str), "hello %d", count);
@@ -554,7 +560,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
         collect_common_send();
       } else {
         leds_on(LEDS_RED);
-        tempReg[12].LO = 0x00; //connected 
+        tempReg[40].LO = 0x00; //connected 
         // LOG_INFO("Connected_HI: %02x Connected_LO: %02x\n", tempReg[12].HI, tempReg[12].LO);
         LOG_INFO("Not reachable yet\n");
       }
